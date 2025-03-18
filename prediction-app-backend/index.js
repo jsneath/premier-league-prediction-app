@@ -1,13 +1,21 @@
+const express = require("express");
 const mongoose = require("mongoose");
+const cors = require("cors");
 require("dotenv").config();
 
-async function connectToDatabase() {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("Connected to MongoDB Atlas");
-  } catch (error) {
-    console.error("Failed to connect to MongoDB:", error);
-  }
-}
+const app = express();
+app.use(cors());
+app.use(express.json());
 
-connectToDatabase();
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => console.log(err));
+
+app.use("/api/auth", require("./middleware/auth"));
+app.use("/api/fixtures", require("./routes/fixtures"));
+app.use("/api/predictions", require("./routes/predictions"));
+app.use("/api/scores", require("./routes/scores"));
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
