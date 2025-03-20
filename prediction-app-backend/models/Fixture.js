@@ -41,6 +41,11 @@ const fixtureSchema = new mongoose.Schema({
       winner: Boolean,
     },
   },
+
+  goals: {
+    home: Number,
+    away: Number,
+  },
 });
 
 module.exports = mongoose.model("Fixture", fixtureSchema);

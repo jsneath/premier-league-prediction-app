@@ -1,7 +1,7 @@
 const express = require("express");
-const router = express.Router(); // Initialize the router
+const router = express.Router();
 const axios = require("axios");
-const Fixture = require("../models/Fixture"); // Add this to import the Fixture model
+const Fixture = require("../models/Fixture");
 
 router.get("/", async (req, res) => {
   try {
@@ -12,21 +12,35 @@ router.get("/", async (req, res) => {
           "X-RapidAPI-Key": process.env.API_FOOTBALL_KEY,
           "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com",
         },
-        params: { league: 39, season: 2024 }, // Premier League
+        params: { league: 39, season: 2024 }, // Example: Premier League 2024
       }
     );
     const fixtures = response.data.response;
 
-    // Save fixtures to MongoDB
+    // Save each fixture to MongoDB
     for (const fixture of fixtures) {
       await Fixture.findOneAndUpdate(
         { id: fixture.fixture.id }, // Match by fixture ID
-        { $set: fixture }, // Update with the full fixture data
+        {
+          $set: {
+            id: fixture.fixture.id,
+            referee: fixture.fixture.referee,
+            timezone: fixture.fixture.timezone,
+            date: new Date(fixture.fixture.date),
+            timestamp: fixture.fixture.timestamp,
+            periods: fixture.fixture.periods,
+            venue: fixture.fixture.venue,
+            status: fixture.fixture.status,
+            league: fixture.league,
+            teams: fixture.teams,
+            goals: fixture.goals, // Save full-time scores
+          },
+        },
         { upsert: true, new: true } // Insert if not exists, return updated doc
       );
     }
 
-    // Optionally fetch from DB to confirm storage (or just send the API response)
+    // Fetch all fixtures from DB and send as response
     const dbFixtures = await Fixture.find();
     res.json(dbFixtures);
   } catch (err) {
