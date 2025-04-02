@@ -2,7 +2,7 @@ function FixtureList({ fixtures }) {
   return (
     <div>
       {fixtures.length === 0 ? (
-        <p>No fixtures available.</p>
+        <p>No upcoming fixtures available.</p>
       ) : (
         <ul className="list-group">
           {fixtures.map((fixture) => (
@@ -13,8 +13,6 @@ function FixtureList({ fixtures }) {
               Date: {new Date(fixture.date).toLocaleString()}
               <br />
               Venue: {fixture.venue.name}, {fixture.venue.city}
-              <br />
-              Full-Time Score: {fixture.goals.home} - {fixture.goals.away}
             </li>
           ))}
         </ul>
