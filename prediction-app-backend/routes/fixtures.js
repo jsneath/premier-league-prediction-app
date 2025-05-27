@@ -51,6 +51,9 @@ router.get("/", async (req, res) => {
     if (req.query.status) {
       query["status.short"] = req.query.status;
     }
+    if (req.query.gameWeek) {
+      query["league.round"] = `Regular Season - ${req.query.gameWeek}`;
+    }
 
     // Fetch filtered fixtures from DB
     const dbFixtures = await Fixture.find(query);

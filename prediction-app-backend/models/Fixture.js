@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const fixtureSchema = new mongoose.Schema({
-  id: Number, // Corresponds to fixture.fixture.id
+  id: Number,
   referee: String,
   timezone: String,
   date: Date,
@@ -26,22 +26,12 @@ const fixtureSchema = new mongoose.Schema({
     name: String,
     country: String,
     logo: String,
+    round: String, // Add this to include the round field
   },
   teams: {
-    home: {
-      id: Number,
-      name: String,
-      logo: String,
-      winner: Boolean,
-    },
-    away: {
-      id: Number,
-      name: String,
-      logo: String,
-      winner: Boolean,
-    },
+    home: { id: Number, name: String, logo: String },
+    away: { id: Number, name: String, logo: String },
   },
-
   goals: {
     home: Number,
     away: Number,
