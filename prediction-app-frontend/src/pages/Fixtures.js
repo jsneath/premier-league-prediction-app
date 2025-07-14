@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom"; // Assuming Router setup
 
 function Fixtures() {
   const [fixtureGroups, setFixtureGroups] = useState({});
@@ -13,21 +14,18 @@ function Fixtures() {
         return res.json();
       })
       .then((data) => {
-        console.log("Received data:", data); // Log the raw API response
+        console.log("Received data:", data);
         if (!Array.isArray(data)) {
           console.error("Expected an array but got:", data);
           return;
         }
         const grouped = data.reduce((acc, fixture) => {
-          if (fixture.league && fixture.league.round) {
-            const gameWeekMatch = fixture.league.round.match(/\d+/);
-            const gameWeek = gameWeekMatch ? gameWeekMatch[0] : "Unknown";
-            if (!acc[gameWeek]) acc[gameWeek] = [];
-            acc[gameWeek].push(fixture);
-          }
+          const gameWeek = fixture.matchweek || "Unknown"; // Use new field
+          if (!acc[gameWeek]) acc[gameWeek] = [];
+          acc[gameWeek].push(fixture);
           return acc;
         }, {});
-        console.log("Grouped fixtures:", grouped); // Log the processed data
+        console.log("Grouped fixtures:", grouped);
         setFixtureGroups(grouped);
       })
       .catch((error) => {
@@ -39,16 +37,21 @@ function Fixtures() {
     <div>
       <h1>Fixtures</h1>
       {Object.keys(fixtureGroups).length === 0 ? (
-        <p>No fixtures available.</p>
+        <p>No fixtures available. Check back later.</p>
       ) : (
         Object.keys(fixtureGroups)
           .sort((a, b) => Number(a) - Number(b))
           .map((gameWeek) => (
             <div key={gameWeek}>
-              <h2>Game Week {gameWeek}</h2>
+              <h2>
+                Matchweek {gameWeek}{" "}
+                <Link to={`/predictions/${gameWeek}`}>Predict</Link>
+              </h2>{" "}
+              {/* Link to predictions page with param */}
               {fixtureGroups[gameWeek].map((fixture) => (
                 <div key={fixture._id}>
-                  {fixture.teams.home.name} vs {fixture.teams.away.name}
+                  {fixture.teams.home.name} vs {fixture.teams.away.name} -{" "}
+                  {new Date(fixture.date).toLocaleDateString()}
                 </div>
               ))}
             </div>
