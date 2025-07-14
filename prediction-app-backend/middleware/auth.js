@@ -62,21 +62,30 @@ router.post(
 );
 
 // Login route
-router.post("/login", loginLimiter, async (req, res) => {
+router.post("/login", async (req, res) => {
   const { username, password } = req.body;
-  try {
-    const user = await User.findOne({ username });
-    if (!user) return res.status(400).json({ msg: "Invalid credentials" });
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ msg: "Invalid credentials" });
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
-    res.json({ token });
-  } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ msg: "An error occurred during login" });
+  const user = await User.findOne({ username });
+  if (!user || !(await user.comparePassword(password))) {
+    // Assume hashed password
+    return res.status(401).json({ message: "Invalid credentials" });
   }
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    expiresIn: "1d",
+  });
+  res.json({ token });
+});
+
+// Dev-only mock login route (add this new route for testing - hit /api/auth/dev-login to get a token without credentials)
+router.get("/dev-login", (req, res) => {
+  if (process.env.NODE_ENV !== "development") {
+    return res.status(403).json({ message: "Dev mode only" });
+  }
+  // Hardcode a test user ID - replace '66b3e8f5a4b5c1234567890' with a real _id from your users collection in MongoDB Atlas
+  const mockUserId = "66b3e8f5a4b5c1234567890";
+  const token = jwt.sign({ id: mockUserId }, process.env.JWT_SECRET, {
+    expiresIn: "7d",
+  }); // Long expiry for testing
+  res.json({ token });
 });
 
 module.exports = router;

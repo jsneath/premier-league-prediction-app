@@ -26,8 +26,9 @@ const fixtureSchema = new mongoose.Schema({
     name: String,
     country: String,
     logo: String,
-    round: String, // Add this to include the round field
+    round: String, // e.g., "Regular Season - 1"
   },
+  matchweek: Number, // New: Extracted from round, e.g., 1
   teams: {
     home: { id: Number, name: String, logo: String },
     away: { id: Number, name: String, logo: String },

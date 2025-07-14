@@ -5,11 +5,14 @@ const Fixture = require("../models/Fixture");
 
 router.get("/", async (req, res) => {
   try {
-    // Build the API request URL with optional status filter
+    // Build the API request URL with optional filters
     let url =
-      "https://api-football-v1.p.rapidapi.com/v3/fixtures?league=39&season=2024";
+      "https://api-football-v1.p.rapidapi.com/v3/fixtures?league=39&season=2025"; // Updated season
     if (req.query.status) {
       url += `&status=${req.query.status}`;
+    }
+    if (req.query.matchweek) {
+      url += `&round=Regular%20Season%20-%20${req.query.matchweek}`;
     }
 
     // Fetch fixtures from API-Football
@@ -21,10 +24,13 @@ router.get("/", async (req, res) => {
     });
 
     const fixtures = response.data.response;
-    console.log("API-Football response:", response.data); // Log the response for debugging
+    console.log("API-Football response:", response.data); // Log for debugging
 
     // Save each fixture to MongoDB
     for (const fixture of fixtures) {
+      const matchweekMatch = fixture.league.round.match(/\d+/);
+      const matchweek = matchweekMatch ? parseInt(matchweekMatch[0]) : null;
+
       await Fixture.findOneAndUpdate(
         { id: fixture.fixture.id },
         {
@@ -38,6 +44,7 @@ router.get("/", async (req, res) => {
             venue: fixture.fixture.venue,
             status: fixture.fixture.status,
             league: fixture.league,
+            matchweek, // New: Extracted
             teams: fixture.teams,
             goals: fixture.goals,
           },
@@ -51,12 +58,12 @@ router.get("/", async (req, res) => {
     if (req.query.status) {
       query["status.short"] = req.query.status;
     }
-    if (req.query.gameWeek) {
-      query["league.round"] = `Regular Season - ${req.query.gameWeek}`;
+    if (req.query.matchweek) {
+      query.matchweek = parseInt(req.query.matchweek);
     }
 
     // Fetch filtered fixtures from DB
-    const dbFixtures = await Fixture.find(query);
+    const dbFixtures = await Fixture.find(query).sort({ date: 1 });
     res.json(dbFixtures);
   } catch (err) {
     console.error("Error:", err.message);
