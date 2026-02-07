@@ -62,7 +62,7 @@ router.post(
 );
 
 // Login route
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
   const { username, password } = req.body;
   const user = await User.findOne({ username });
   if (!user || !(await user.comparePassword(password))) {
@@ -73,6 +73,21 @@ router.post("/login", async (req, res) => {
     expiresIn: "1d",
   });
   res.json({ token });
+});
+
+// GET /api/auth/me - Get current authenticated user
+const verifyToken = require("./verifyToken");
+router.get("/me", verifyToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({ id: user._id, username: user.username, email: user.email });
+  } catch (err) {
+    console.error("GET /me error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 // Dev-only mock login route (add this new route for testing - hit /api/auth/dev-login to get a token without credentials)

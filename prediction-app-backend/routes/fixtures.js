@@ -3,19 +3,52 @@ const router = express.Router();
 const axios = require("axios");
 const Fixture = require("../models/Fixture");
 
+// GET /api/fixtures - Read from MongoDB only (fast)
 router.get("/", async (req, res) => {
   try {
-    // Build the API request URL with optional filters
-    let url =
-      "https://api-football-v1.p.rapidapi.com/v3/fixtures?league=39&season=2025"; // Updated season
+    let query = {};
     if (req.query.status) {
-      url += `&status=${req.query.status}`;
+      query["status.short"] = req.query.status;
     }
     if (req.query.matchweek) {
-      url += `&round=Regular%20Season%20-%20${req.query.matchweek}`;
+      query.matchweek = parseInt(req.query.matchweek);
     }
 
-    // Fetch fixtures from API-Football
+    const fixtures = await Fixture.find(query).sort({ date: 1 });
+    res.json(fixtures);
+  } catch (err) {
+    console.error("Error fetching fixtures:", err.message);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
+// GET /api/fixtures/current - Get the current/next matchweek number
+router.get("/current", async (req, res) => {
+  try {
+    // Find the earliest fixture that hasn't finished yet
+    const upcoming = await Fixture.findOne({
+      "status.short": { $ne: "FT" },
+    }).sort({ date: 1 });
+
+    if (upcoming) {
+      return res.json({ matchweek: upcoming.matchweek });
+    }
+
+    // All fixtures finished — return the last matchweek
+    const last = await Fixture.findOne().sort({ matchweek: -1 });
+    res.json({ matchweek: last ? last.matchweek : 1 });
+  } catch (err) {
+    console.error("Error getting current matchweek:", err.message);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
+// POST /api/fixtures/refresh - Manual sync from API-Football (admin use)
+router.post("/refresh", async (req, res) => {
+  try {
+    let url =
+      "https://api-football-v1.p.rapidapi.com/v3/fixtures?league=39&season=2025";
+
     const response = await axios.get(url, {
       headers: {
         "X-RapidAPI-Key": process.env.API_FOOTBALL_KEY,
@@ -24,9 +57,8 @@ router.get("/", async (req, res) => {
     });
 
     const fixtures = response.data.response;
-    console.log("API-Football response:", response.data); // Log for debugging
+    let count = 0;
 
-    // Save each fixture to MongoDB
     for (const fixture of fixtures) {
       const matchweekMatch = fixture.league.round.match(/\d+/);
       const matchweek = matchweekMatch ? parseInt(matchweekMatch[0]) : null;
@@ -44,29 +76,19 @@ router.get("/", async (req, res) => {
             venue: fixture.fixture.venue,
             status: fixture.fixture.status,
             league: fixture.league,
-            matchweek, // New: Extracted
+            matchweek,
             teams: fixture.teams,
             goals: fixture.goals,
           },
         },
         { upsert: true, new: true }
       );
+      count++;
     }
 
-    // Build query for fetching from DB
-    let query = {};
-    if (req.query.status) {
-      query["status.short"] = req.query.status;
-    }
-    if (req.query.matchweek) {
-      query.matchweek = parseInt(req.query.matchweek);
-    }
-
-    // Fetch filtered fixtures from DB
-    const dbFixtures = await Fixture.find(query).sort({ date: 1 });
-    res.json(dbFixtures);
+    res.json({ message: `Refreshed ${count} fixtures` });
   } catch (err) {
-    console.error("Error:", err.message);
+    console.error("Refresh error:", err.message);
     res.status(500).json({ msg: "Server error" });
   }
 });
