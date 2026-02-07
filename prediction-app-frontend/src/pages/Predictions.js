@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import PredictionForm from "../components/PredictionForm";
+import api from "../api/axios";
 
 function Predictions() {
   const { matchweek } = useParams();
@@ -17,18 +18,17 @@ function Predictions() {
       return;
     }
 
-    fetch(`/api/fixtures?matchweek=${matchweek}`)
-      .then((response) => {
-        if (!response.ok)
-          throw new Error("Could not load fixtures for this matchweek");
-        return response.json();
-      })
-      .then((data) => {
-        setFixtures(data);
+    api
+      .get(`/api/fixtures?matchweek=${matchweek}`)
+      .then((res) => {
+        setFixtures(res.data);
         setLoading(false);
       })
       .catch((err) => {
-        setError(err.message);
+        setError(
+          err.response?.data?.message ||
+            "Could not load fixtures for this matchweek"
+        );
         setLoading(false);
       });
   }, [matchweek, user, authLoading, navigate]);

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useState, useEffect } from "react";
 import Leaderboard from "../components/Leaderboard";
+import api from "../api/axios";
 
 function Home() {
   const { user } = useAuth();
@@ -10,12 +11,9 @@ function Home() {
 
   useEffect(() => {
     if (user) {
-      fetch("/api/scores/leaderboard")
-        .then((res) => {
-          if (!res.ok) throw new Error();
-          return res.json();
-        })
-        .then((data) => setScores(Array.isArray(data) ? data : []))
+      api
+        .get("/api/scores/leaderboard")
+        .then((res) => setScores(Array.isArray(res.data) ? res.data : []))
         .catch(() => setScoresError(true));
     }
   }, [user]);

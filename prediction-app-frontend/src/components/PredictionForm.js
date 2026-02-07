@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api/axios";
 
 const PredictionForm = ({ fixtures, matchweek }) => {
   const [predictions, setPredictions] = useState([]);
@@ -18,9 +18,7 @@ const PredictionForm = ({ fixtures, matchweek }) => {
 
     const fetchPreds = async () => {
       try {
-        const res = await axios.get(`/api/predictions/${matchweek}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await api.get(`/api/predictions/${matchweek}`);
         const existing = res.data.predictions || [];
         setDeadlines(res.data.deadlines || []);
         setPredictions(
@@ -88,11 +86,10 @@ const PredictionForm = ({ fixtures, matchweek }) => {
     setSubmitting(true);
     setMessage("");
     try {
-      const res = await axios.post(
-        "/api/predictions",
-        { matchweek: parseInt(matchweek), predictions },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.post("/api/predictions", {
+        matchweek: parseInt(matchweek),
+        predictions,
+      });
       setMessage(res.data.message);
       setMessageType("success");
     } catch (err) {

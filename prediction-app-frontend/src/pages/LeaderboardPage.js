@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import Leaderboard from "../components/Leaderboard";
 import { useAuth } from "../context/AuthContext";
+import api from "../api/axios";
 
 function LeaderboardPage() {
   const [scores, setScores] = useState([]);
@@ -9,17 +10,16 @@ function LeaderboardPage() {
   const { user } = useAuth();
 
   useEffect(() => {
-    fetch("/api/scores/leaderboard")
+    api
+      .get("/api/scores/leaderboard")
       .then((res) => {
-        if (!res.ok) throw new Error("Could not load leaderboard");
-        return res.json();
-      })
-      .then((data) => {
-        setScores(Array.isArray(data) ? data : []);
+        setScores(Array.isArray(res.data) ? res.data : []);
         setLoading(false);
       })
       .catch((err) => {
-        setError(err.message);
+        setError(
+          err.response?.data?.message || "Could not load leaderboard"
+        );
         setLoading(false);
       });
   }, []);

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 function Login() {
@@ -11,6 +11,8 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const { login, register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sessionExpired = searchParams.get("expired") === "true";
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -55,6 +57,12 @@ function Login() {
       <div className="col-md-6 col-lg-5">
         <div className="card shadow">
           <div className="card-body p-4">
+            {sessionExpired && (
+              <div className="alert alert-warning">
+                Your session has expired. Please log in again.
+              </div>
+            )}
+
             <ul className="nav nav-tabs mb-3">
               <li className="nav-item">
                 <button
@@ -111,6 +119,11 @@ function Login() {
                 >
                   {loading ? "Logging in..." : "Login"}
                 </button>
+                <div className="text-center mt-2">
+                  <Link to="/forgot-password" className="small text-muted">
+                    Forgot password?
+                  </Link>
+                </div>
               </form>
             ) : (
               <form onSubmit={handleRegister}>

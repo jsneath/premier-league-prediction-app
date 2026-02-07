@@ -31,6 +31,17 @@ function Navbar() {
                 Fixtures
               </Link>
             </li>
+            {user && (
+              <li className="nav-item">
+                <Link
+                  className="nav-link"
+                  to="/leagues"
+                  onClick={() => setExpanded(false)}
+                >
+                  Leagues
+                </Link>
+              </li>
+            )}
             <li className="nav-item">
               <Link
                 className="nav-link"

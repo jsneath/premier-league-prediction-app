@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import api from "../api/axios";
 
 function Fixtures() {
   const [fixtures, setFixtures] = useState([]);
@@ -11,17 +12,14 @@ function Fixtures() {
   const { user } = useAuth();
 
   useEffect(() => {
-    fetch("/api/fixtures/current")
+    api
+      .get("/api/fixtures/current")
       .then((res) => {
-        if (!res.ok) throw new Error("Could not load fixtures");
-        return res.json();
-      })
-      .then((data) => {
-        setCurrentWeek(data.matchweek);
-        setSelectedWeek(data.matchweek);
+        setCurrentWeek(res.data.matchweek);
+        setSelectedWeek(res.data.matchweek);
       })
       .catch((err) => {
-        setError(err.message);
+        setError(err.response?.data?.message || "Could not load fixtures");
         setLoading(false);
       });
   }, []);
@@ -30,17 +28,14 @@ function Fixtures() {
     if (selectedWeek === null) return;
     setLoading(true);
     setError(null);
-    fetch(`/api/fixtures?matchweek=${selectedWeek}`)
+    api
+      .get(`/api/fixtures?matchweek=${selectedWeek}`)
       .then((res) => {
-        if (!res.ok) throw new Error("Could not load fixtures");
-        return res.json();
-      })
-      .then((data) => {
-        setFixtures(data);
+        setFixtures(res.data);
         setLoading(false);
       })
       .catch((err) => {
-        setError(err.message);
+        setError(err.response?.data?.message || "Could not load fixtures");
         setLoading(false);
       });
   }, [selectedWeek]);

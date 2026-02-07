@@ -64,10 +64,11 @@ const refreshFixtures = async () => {
 // New: Schedule daily refresh (every day at 00:00 UTC)
 cron.schedule("0 0 * * *", refreshFixtures);
 
-app.use("/api/auth", require("./middleware/auth")); // Changed back to middleware/auth assuming that's where your auth file is
+app.use("/api/auth", require("./middleware/auth"));
 app.use("/api/fixtures", require("./routes/fixtures"));
 app.use("/api/predictions", require("./routes/predictions"));
 app.use("/api/scores", require("./routes/scores"));
+app.use("/api/leagues", require("./routes/leagues"));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

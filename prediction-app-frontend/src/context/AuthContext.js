@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api/axios";
 
 const AuthContext = createContext(null);
 
@@ -10,16 +10,13 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (token) {
-      axios
-        .get("/api/auth/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+      api
+        .get("/api/auth/me")
         .then((res) => {
           setUser(res.data);
           setLoading(false);
         })
         .catch(() => {
-          // Token is invalid/expired
           localStorage.removeItem("token");
           setToken(null);
           setUser(null);
@@ -31,14 +28,14 @@ export function AuthProvider({ children }) {
   }, [token]);
 
   const login = async (username, password) => {
-    const res = await axios.post("/api/auth/login", { username, password });
+    const res = await api.post("/api/auth/login", { username, password });
     const newToken = res.data.token;
     localStorage.setItem("token", newToken);
     setToken(newToken);
   };
 
   const register = async (username, email, password) => {
-    const res = await axios.post("/api/auth/register", {
+    const res = await api.post("/api/auth/register", {
       username,
       email,
       password,

@@ -1,8 +1,10 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose");
 const Fixture = require("../models/Fixture");
 const Prediction = require("../models/Prediction");
 const Score = require("../models/Score");
+const League = require("../models/League");
 const verifyToken = require("../middleware/verifyToken");
 
 // POST /api/scores/update - Calculate and store scores for completed fixtures
@@ -70,10 +72,22 @@ router.post("/update", async (req, res) => {
   }
 });
 
-// GET /api/scores/leaderboard - Aggregated leaderboard
+// GET /api/scores/leaderboard - Aggregated leaderboard (optional ?leagueId= filter)
 router.get("/leaderboard", async (req, res) => {
   try {
-    const scores = await Score.aggregate([
+    const pipeline = [];
+
+    // If leagueId provided, filter to league members only
+    if (req.query.leagueId) {
+      const league = await League.findById(req.query.leagueId);
+      if (!league) {
+        return res.status(404).json({ message: "League not found" });
+      }
+      const memberIds = league.members.map((m) => m.userId);
+      pipeline.push({ $match: { userId: { $in: memberIds } } });
+    }
+
+    pipeline.push(
       { $group: { _id: "$userId", totalPoints: { $sum: "$points" } } },
       {
         $lookup: {
@@ -91,8 +105,10 @@ router.get("/leaderboard", async (req, res) => {
           username: "$user.username",
         },
       },
-      { $sort: { totalPoints: -1 } },
-    ]);
+      { $sort: { totalPoints: -1 } }
+    );
+
+    const scores = await Score.aggregate(pipeline);
     res.json(scores);
   } catch (err) {
     console.error("Leaderboard error:", err);
