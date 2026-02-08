@@ -7,7 +7,13 @@ const Fixture = require("./models/Fixture"); // Added import for Fixture model
 require("dotenv").config();
 
 const app = express();
-app.use(cors());
+app.use(
+  cors(
+    process.env.FRONTEND_URL
+      ? { origin: process.env.FRONTEND_URL }
+      : undefined
+  )
+);
 app.use(express.json());
 
 mongoose
