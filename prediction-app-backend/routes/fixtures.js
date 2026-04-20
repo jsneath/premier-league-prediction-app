@@ -25,16 +25,19 @@ router.get("/", async (req, res) => {
 // GET /api/fixtures/current - Get the current/next matchweek number
 router.get("/current", async (req, res) => {
   try {
-    // Find the earliest fixture that hasn't finished yet
-    const upcoming = await Fixture.findOne({
-      "status.short": { $ne: "FT" },
+    // Find the earliest fixture that is active or not yet played
+    // Excludes: FT, AET, PEN (finished), PST, CANC, ABD, AWD, WO (won't play)
+    const DONE_STATUSES = ["FT", "AET", "PEN", "PST", "CANC", "ABD", "AWD", "WO"];
+
+    const active = await Fixture.findOne({
+      "status.short": { $nin: DONE_STATUSES },
     }).sort({ date: 1 });
 
-    if (upcoming) {
-      return res.json({ matchweek: upcoming.matchweek });
+    if (active) {
+      return res.json({ matchweek: active.matchweek });
     }
 
-    // All fixtures finished — return the last matchweek
+    // All fixtures done — return the last matchweek
     const last = await Fixture.findOne().sort({ matchweek: -1 });
     res.json({ matchweek: last ? last.matchweek : 1 });
   } catch (err) {

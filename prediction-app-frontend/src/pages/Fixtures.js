@@ -3,6 +3,22 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
 
+function formatDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString("en-GB", {
+    weekday: "short", day: "numeric", month: "short",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function StatusPill({ fixture }) {
+  const s = fixture.status?.short;
+  if (["FT","AET","PEN"].includes(s))
+    return <span className="status-ft">FT</span>;
+  if (["1H","HT","2H","ET","BT","P","LIVE"].includes(s))
+    return <span className="status-live">LIVE {fixture.status.elapsed}'</span>;
+  return <span style={{ color: "var(--text-muted)", fontSize: "0.78rem" }}>{formatDate(fixture.date)}</span>;
+}
+
 function Fixtures() {
   const [fixtures, setFixtures] = useState([]);
   const [currentWeek, setCurrentWeek] = useState(null);
@@ -12,172 +28,143 @@ function Fixtures() {
   const { user } = useAuth();
 
   useEffect(() => {
-    api
-      .get("/api/fixtures/current")
-      .then((res) => {
-        setCurrentWeek(res.data.matchweek);
-        setSelectedWeek(res.data.matchweek);
-      })
-      .catch((err) => {
-        setError(err.response?.data?.message || "Could not load fixtures");
-        setLoading(false);
-      });
+    api.get("/api/fixtures/current")
+      .then((res) => { setCurrentWeek(res.data.matchweek); setSelectedWeek(res.data.matchweek); })
+      .catch(() => { setError("Could not load fixtures"); setLoading(false); });
   }, []);
 
   useEffect(() => {
     if (selectedWeek === null) return;
-    setLoading(true);
-    setError(null);
-    api
-      .get(`/api/fixtures?matchweek=${selectedWeek}`)
-      .then((res) => {
-        setFixtures(res.data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError(err.response?.data?.message || "Could not load fixtures");
-        setLoading(false);
-      });
+    setLoading(true); setError(null);
+    api.get(`/api/fixtures?matchweek=${selectedWeek}`)
+      .then((res) => { setFixtures(res.data); setLoading(false); })
+      .catch(() => { setError("Could not load fixtures"); setLoading(false); });
   }, [selectedWeek]);
 
-  const hasOpenFixtures = fixtures.some(
-    (f) => new Date(f.date).getTime() - Date.now() > 60 * 60 * 1000
-  );
-  const allFinished =
-    fixtures.length > 0 && fixtures.every((f) => f.status?.short === "FT");
+  const sorted = [...fixtures].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const hasOpen = sorted.some((f) => new Date(f.date).getTime() - Date.now() > 60 * 60 * 1000);
+  const allFT = sorted.length > 0 && sorted.every((f) => ["FT","AET","PEN"].includes(f.status?.short));
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="mb-0">Matchweek {selectedWeek}</h1>
+      {/* Header */}
+      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h1 className="page-title mb-0">Matchweek {selectedWeek}</h1>
         <div className="d-flex align-items-center gap-2">
-          <button
-            className="btn btn-outline-secondary btn-sm"
-            disabled={selectedWeek <= 1}
-            onClick={() => setSelectedWeek((w) => w - 1)}
-          >
-            &laquo; Prev
-          </button>
+          <button className="btn btn-outline-secondary btn-sm" disabled={!selectedWeek || selectedWeek <= 1}
+            onClick={() => setSelectedWeek((w) => w - 1)}>‹ Prev</button>
           {selectedWeek !== currentWeek && (
-            <button
-              className="btn btn-outline-primary btn-sm"
-              onClick={() => setSelectedWeek(currentWeek)}
-            >
+            <button className="btn btn-outline-primary btn-sm" onClick={() => setSelectedWeek(currentWeek)}>
               Current
             </button>
           )}
-          <button
-            className="btn btn-outline-secondary btn-sm"
-            disabled={selectedWeek >= 38}
-            onClick={() => setSelectedWeek((w) => w + 1)}
-          >
-            Next &raquo;
-          </button>
+          <button className="btn btn-outline-secondary btn-sm" disabled={!selectedWeek || selectedWeek >= 38}
+            onClick={() => setSelectedWeek((w) => w + 1)}>Next ›</button>
         </div>
       </div>
 
-      {allFinished && (
-        <span className="badge bg-secondary mb-3">Completed</span>
-      )}
-      {!allFinished && fixtures.length > 0 && (
-        <span className="badge bg-success mb-3">Upcoming</span>
-      )}
-
-      {loading ? (
-        <div className="text-center mt-5">
-          <div className="spinner-border" role="status">
-            <span className="visually-hidden">Loading...</span>
+      <div className="card">
+        {loading ? (
+          <div className="card-body text-center py-5">
+            <div className="spinner-border" role="status" />
           </div>
-        </div>
-      ) : error ? (
-        <div className="alert alert-danger">
-          <strong>Failed to load fixtures.</strong> Please check your connection
-          and try again.
-          <button
-            className="btn btn-outline-danger btn-sm ms-3"
-            onClick={() => setSelectedWeek((w) => w)}
-          >
-            Retry
-          </button>
-        </div>
-      ) : fixtures.length === 0 ? (
-        <div className="alert alert-info">
-          No fixtures for Matchweek {selectedWeek} yet. They may not have been
-          scheduled — check back later.
-        </div>
-      ) : (
-        <>
-          <table className="table table-hover">
-            <tbody>
-              {fixtures
-                .sort((a, b) => new Date(a.date) - new Date(b.date))
-                .map((fixture) => (
-                  <tr key={fixture._id}>
-                    <td className="text-end" style={{ width: "35%" }}>
-                      {fixture.teams.home.name}
-                      <img
-                        src={fixture.teams.home.logo}
-                        alt=""
-                        width="24"
-                        className="ms-2"
-                      />
-                    </td>
-                    <td
-                      className="text-center fw-bold"
-                      style={{ width: "12%" }}
-                    >
-                      {fixture.status?.short === "FT"
-                        ? `${fixture.goals.home} - ${fixture.goals.away}`
-                        : "vs"}
-                    </td>
-                    <td style={{ width: "35%" }}>
-                      <img
-                        src={fixture.teams.away.logo}
-                        alt=""
-                        width="24"
-                        className="me-2"
-                      />
-                      {fixture.teams.away.name}
-                    </td>
-                    <td className="text-muted small" style={{ width: "18%" }}>
-                      {new Date(fixture.date).toLocaleDateString("en-GB", {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+        ) : error ? (
+          <div className="card-body">
+            <div className="alert alert-danger mb-0">
+              {error}
+              <button className="btn btn-outline-danger btn-sm ms-3" onClick={() => setSelectedWeek((w) => w)}>Retry</button>
+            </div>
+          </div>
+        ) : sorted.length === 0 ? (
+          <div className="card-body">
+            <div className="alert alert-info mb-0">No fixtures for GW{selectedWeek} yet.</div>
+          </div>
+        ) : (
+          <>
+            <div className="card-header d-flex align-items-center gap-2">
+              {allFT ? <span className="status-ft">All Finished</span>
+                : hasOpen ? <span className="status-upcoming">Upcoming</span>
+                : <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>Predictions Locked</span>}
+            </div>
 
-          {hasOpenFixtures && user && (
-            <div className="text-center mt-3">
-              <Link
-                to={`/predictions/${selectedWeek}`}
-                className="btn btn-primary"
-              >
-                Make Predictions
-              </Link>
+            {/* Fixtures list */}
+            <div>
+              {sorted.map((f) => {
+                const ft = ["FT","AET","PEN"].includes(f.status?.short);
+                const live = ["1H","HT","2H","ET","BT","P","LIVE"].includes(f.status?.short);
+                return (
+                  <div key={f._id} style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 90px 1fr",
+                    alignItems: "center",
+                    padding: "0.9rem 1.25rem",
+                    borderBottom: "1px solid var(--border)",
+                    gap: "0.5rem",
+                  }}>
+                    {/* Home team */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.5rem" }}>
+                      <span style={{ fontWeight: 600, fontSize: "0.9rem", textAlign: "right" }}>
+                        {f.teams.home.name}
+                      </span>
+                      <img src={f.teams.home.logo} alt="" width="28" height="28"
+                        style={{ objectFit: "contain", flexShrink: 0 }} />
+                    </div>
+
+                    {/* Score / date */}
+                    <div style={{ textAlign: "center" }}>
+                      {ft ? (
+                        <span style={{ fontFamily: "Oswald, sans-serif", fontSize: "1.15rem", fontWeight: 700, color: "var(--text)" }}>
+                          {f.goals.home} <span style={{ color: "var(--text-muted)" }}>–</span> {f.goals.away}
+                        </span>
+                      ) : live ? (
+                        <span className="status-live">{f.goals.home ?? 0}–{f.goals.away ?? 0}</span>
+                      ) : (
+                        <>
+                          <div style={{ fontFamily: "Oswald, sans-serif", fontSize: "1rem", color: "var(--text-muted)" }}>vs</div>
+                          <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                            {new Date(f.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                            {" "}
+                            {new Date(f.date).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Away team */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <img src={f.teams.away.logo} alt="" width="28" height="28"
+                        style={{ objectFit: "contain", flexShrink: 0 }} />
+                      <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>
+                        {f.teams.away.name}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          )}
-          {hasOpenFixtures && !user && (
-            <div className="text-center mt-3">
-              <Link to="/login" className="btn btn-outline-primary">
-                Login to Predict
-              </Link>
+
+            {/* Actions */}
+            <div className="card-body">
+              <div className="d-flex justify-content-center gap-2 flex-wrap">
+                {hasOpen && user && (
+                  <Link to={`/predictions/${selectedWeek}`} className="btn btn-primary">Make Predictions</Link>
+                )}
+                {hasOpen && !user && (
+                  <Link to="/login" className="btn btn-outline-primary">Login to Predict</Link>
+                )}
+                {user && (
+                  <Link to={`/gameweek/${selectedWeek}`} className="btn btn-outline-secondary">View Results</Link>
+                )}
+              </div>
+              {!hasOpen && !allFT && (
+                <p className="text-muted text-center small mt-2 mb-0">
+                  All predictions locked — kickoffs are within 1 hour.
+                </p>
+              )}
             </div>
-          )}
-          {!hasOpenFixtures && !allFinished && (
-            <div className="alert alert-info mt-3 text-center">
-              All fixtures in this matchweek have locked (less than 1 hour to
-              kickoff).
-            </div>
-          )}
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

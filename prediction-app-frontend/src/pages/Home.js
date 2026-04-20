@@ -7,12 +7,16 @@ import api from "../api/axios";
 function Home() {
   const { user } = useAuth();
   const [scores, setScores] = useState([]);
+  const [currentWeek, setCurrentWeek] = useState(null);
   const [scoresError, setScoresError] = useState(false);
 
   useEffect(() => {
+    api.get("/api/fixtures/current")
+      .then((res) => setCurrentWeek(res.data.matchweek))
+      .catch(() => {});
+
     if (user) {
-      api
-        .get("/api/scores/leaderboard")
+      api.get("/api/scores/leaderboard")
         .then((res) => setScores(Array.isArray(res.data) ? res.data : []))
         .catch(() => setScoresError(true));
     }
@@ -20,73 +24,82 @@ function Home() {
 
   return (
     <div>
-      <div className="text-center py-5">
-        <h1 className="display-5 fw-bold">Premier League Predictions</h1>
-        <p className="lead text-muted">
-          Predict match scores, earn points, and compete with friends!
-        </p>
-        <div className="d-flex justify-content-center gap-3 mt-4">
-          <Link to="/fixtures" className="btn btn-primary btn-lg">
-            View Fixtures
-          </Link>
-          {!user && (
-            <Link to="/login" className="btn btn-outline-primary btn-lg">
-              Get Started
-            </Link>
-          )}
-        </div>
-      </div>
-
-      <div className="row mt-4">
-        <div className="col-md-6">
-          <div className="card">
-            <div className="card-body">
-              <h5 className="card-title">How Scoring Works</h5>
-              <ul className="list-unstyled">
-                <li className="mb-2">
-                  <strong>3 points</strong> - Exact score prediction
-                </li>
-                <li className="mb-2">
-                  <strong>1 point</strong> - Correct result (win/draw/loss)
-                </li>
-                <li className="mb-2">
-                  <strong>Double Points</strong> - Pick one match per week to
-                  double your points
-                </li>
-              </ul>
+      {/* Hero */}
+      <div className="hero-section">
+        <div className="row align-items-center">
+          <div className="col-lg-7">
+            <h1 className="hero-title">Premier League<br />Predictions</h1>
+            <p className="hero-subtitle">
+              Pick your scores, earn points, and beat your mates all season long.
+            </p>
+            <div className="d-flex gap-2 flex-wrap">
+              {currentWeek && (
+                <Link to={`/fixtures`} className="btn btn-primary btn-lg">
+                  GW{currentWeek} Fixtures
+                </Link>
+              )}
+              {user && currentWeek && (
+                <Link to={`/predictions/${currentWeek}`} className="btn btn-success btn-lg">
+                  Make Predictions
+                </Link>
+              )}
+              {!user && (
+                <Link to="/login" className="btn btn-outline-primary btn-lg">
+                  Get Started
+                </Link>
+              )}
             </div>
           </div>
         </div>
-        <div className="col-md-6">
-          {user && scores.length > 0 ? (
-            <div className="card">
-              <div className="card-body">
-                <h5 className="card-title">
-                  Leaderboard{" "}
-                  <Link to="/leaderboard" className="small">
-                    View All
-                  </Link>
-                </h5>
-                <Leaderboard
-                  scores={scores.slice(0, 5)}
-                  currentUserId={user?.id}
-                />
+      </div>
+
+      {/* Scoring rules + leaderboard */}
+      <div className="row g-3">
+        <div className="col-lg-5">
+          <div className="card h-100">
+            <div className="card-header">How Scoring Works</div>
+            <div className="card-body d-flex flex-column gap-2">
+              <div className="scoring-pill">
+                <span className="scoring-pill-points">3</span>
+                <span className="scoring-pill-label">pts for exact score prediction</span>
+              </div>
+              <div className="scoring-pill">
+                <span className="scoring-pill-points">1</span>
+                <span className="scoring-pill-label">pt for correct result (win/draw/loss)</span>
+              </div>
+              <div className="scoring-pill">
+                <span className="scoring-pill-points" style={{ color: "var(--purple-light)", fontSize: "1.1rem" }}>×2</span>
+                <span className="scoring-pill-label">Double Points — pick one match per week</span>
+              </div>
+              <div className="scoring-pill" style={{ marginTop: "auto" }}>
+                <span className="scoring-pill-points" style={{ fontSize: "1rem" }}>⏰</span>
+                <span className="scoring-pill-label">Predictions lock 1 hour before kickoff</span>
               </div>
             </div>
-          ) : (
-            <div className="card">
-              <div className="card-body">
-                <h5 className="card-title">Get Started</h5>
-                <p>
-                  {user
-                    ? scoresError
-                      ? "Could not load leaderboard — check back later."
-                      : "Head to Fixtures to start predicting!"
-                    : "Login or register to start making predictions and climb the leaderboard."}
-                </p>
-              </div>
+          </div>
+        </div>
+
+        <div className="col-lg-7">
+          <div className="card h-100">
+            <div className="card-header d-flex justify-content-between align-items-center">
+              <span>Season Leaderboard</span>
+              <Link to="/leaderboard" className="btn btn-outline-secondary btn-sm">View All</Link>
             </div>
-          )}
+            <div className="card-body p-0">
+              {!user ? (
+                <div className="p-4 text-center text-muted">
+                  <p className="mb-2">Sign in to see the leaderboard.</p>
+                  <Link to="/login" className="btn btn-primary btn-sm">Login</Link>
+                </div>
+              ) : scoresError ? (
+                <div className="p-4 text-muted">Could not load leaderboard — try again later.</div>
+              ) : scores.length === 0 ? (
+                <div className="p-4 text-muted">No scores yet. Start predicting!</div>
+              ) : (
+                <Leaderboard scores={scores.slice(0, 5)} currentUserId={user?.id} />
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

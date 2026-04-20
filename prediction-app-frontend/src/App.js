@@ -12,6 +12,7 @@ import Leagues from "./pages/Leagues";
 import CreateLeague from "./pages/CreateLeague";
 import JoinLeague from "./pages/JoinLeague";
 import LeagueDetail from "./pages/LeagueDetail";
+import GameweekReview from "./pages/GameweekReview";
 
 function App() {
   return (
@@ -32,6 +33,8 @@ function App() {
             <Route path="/leagues/join" element={<JoinLeague />} />
             <Route path="/leagues/:id" element={<LeagueDetail />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/gameweek/:matchweek" element={<GameweekReview />} />
+            <Route path="/gameweek" element={<GameweekReview />} />
             <Route path="*" element={<div>404 Not Found</div>} />
           </Routes>
         </div>

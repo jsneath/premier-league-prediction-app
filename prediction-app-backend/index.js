@@ -1,9 +1,11 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const cron = require("node-cron"); // New import
-const axios = require("axios"); // Added import for axios
-const Fixture = require("./models/Fixture"); // Added import for Fixture model
+const cron = require("node-cron");
+const axios = require("axios");
+const Fixture = require("./models/Fixture");
+const Prediction = require("./models/Prediction");
+const Score = require("./models/Score");
 require("dotenv").config();
 
 const app = express();
@@ -62,13 +64,63 @@ const refreshFixtures = async () => {
       );
     }
     console.log("Fixtures refreshed successfully.");
+
+    // After refreshing fixtures, recalculate scores
+    await updateScores();
   } catch (err) {
     console.error("Error refreshing fixtures:", err);
   }
 };
 
-// New: Schedule daily refresh (every day at 00:00 UTC)
-cron.schedule("0 0 * * *", refreshFixtures);
+const updateScores = async () => {
+  try {
+    const fixtures = await Fixture.find({ "status.short": "FT" });
+    const matchweeks = [...new Set(fixtures.map((f) => f.matchweek))];
+
+    for (const matchweek of matchweeks) {
+      const weekFixtures = fixtures.filter((f) => f.matchweek === matchweek);
+      const predictions = await Prediction.find({ matchweek });
+
+      for (const predDoc of predictions) {
+        let totalPoints = 0;
+
+        for (const pred of predDoc.predictions) {
+          const fixture = weekFixtures.find(
+            (f) => f._id.toString() === pred.fixtureId.toString()
+          );
+          if (!fixture) continue;
+
+          const actualHome = fixture.goals.home;
+          const actualAway = fixture.goals.away;
+          if (actualHome === null || actualAway === null) continue;
+
+          const exactMatch =
+            pred.predictedHomeScore === actualHome &&
+            pred.predictedAwayScore === actualAway;
+          const correctResult =
+            (pred.predictedHomeScore > pred.predictedAwayScore && actualHome > actualAway) ||
+            (pred.predictedHomeScore < pred.predictedAwayScore && actualHome < actualAway) ||
+            (pred.predictedHomeScore === pred.predictedAwayScore && actualHome === actualAway);
+
+          if (exactMatch) totalPoints += pred.isDoublePoints ? 6 : 3;
+          else if (correctResult) totalPoints += pred.isDoublePoints ? 2 : 1;
+        }
+
+        await Score.findOneAndUpdate(
+          { userId: predDoc.userId, matchweek },
+          { $set: { points: totalPoints } },
+          { upsert: true }
+        );
+      }
+    }
+    console.log("Scores updated successfully.");
+  } catch (err) {
+    console.error("Error updating scores:", err);
+  }
+};
+
+// Refresh fixtures + recalculate scores every 2 hours
+cron.schedule("0 */2 * * *", refreshFixtures);
 
 app.use("/api/auth", require("./middleware/auth"));
 app.use("/api/fixtures", require("./routes/fixtures"));

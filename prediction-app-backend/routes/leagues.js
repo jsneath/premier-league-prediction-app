@@ -3,6 +3,7 @@ const router = express.Router();
 const mongoose = require("mongoose");
 const League = require("../models/League");
 const Score = require("../models/Score");
+const User = require("../models/User");
 const verifyToken = require("../middleware/verifyToken");
 const generateInviteCode = require("../utils/generateInviteCode");
 
@@ -128,26 +129,24 @@ router.get("/:id/leaderboard", async (req, res) => {
 
     const memberIds = league.members.map((m) => m.userId);
 
-    const scores = await Score.aggregate([
-      { $match: { userId: { $in: memberIds } } },
-      { $group: { _id: "$userId", totalPoints: { $sum: "$points" } } },
+    const scores = await User.aggregate([
+      { $match: { _id: { $in: memberIds } } },
       {
         $lookup: {
-          from: "users",
+          from: "scores",
           localField: "_id",
-          foreignField: "_id",
-          as: "user",
+          foreignField: "userId",
+          as: "scoreEntries",
         },
       },
-      { $unwind: "$user" },
       {
         $project: {
           _id: 1,
-          totalPoints: 1,
-          username: "$user.username",
+          username: 1,
+          totalPoints: { $sum: "$scoreEntries.points" },
         },
       },
-      { $sort: { totalPoints: -1 } },
+      { $sort: { totalPoints: -1, username: 1 } },
     ]);
 
     res.json(scores);

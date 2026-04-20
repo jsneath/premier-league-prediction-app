@@ -10,16 +10,10 @@ function LeaderboardPage() {
   const { user } = useAuth();
 
   useEffect(() => {
-    api
-      .get("/api/scores/leaderboard")
-      .then((res) => {
-        setScores(Array.isArray(res.data) ? res.data : []);
-        setLoading(false);
-      })
+    api.get("/api/scores/leaderboard")
+      .then((res) => { setScores(Array.isArray(res.data) ? res.data : []); setLoading(false); })
       .catch((err) => {
-        setError(
-          err.response?.data?.message || "Could not load leaderboard"
-        );
+        setError(err.response?.data?.message || "Could not load leaderboard");
         setLoading(false);
       });
   }, []);
@@ -27,41 +21,39 @@ function LeaderboardPage() {
   if (loading) {
     return (
       <div className="text-center mt-5">
-        <div className="spinner-border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
+        <div className="spinner-border" role="status"><span className="visually-hidden">Loading…</span></div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div>
-        <h1 className="mb-4">Leaderboard</h1>
-        <div className="alert alert-danger">
-          <strong>Failed to load leaderboard.</strong> Please check your
-          connection and try again.
-          <button
-            className="btn btn-outline-danger btn-sm ms-3"
-            onClick={() => window.location.reload()}
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const myRank = user ? scores.findIndex((s) => s._id === user.id) + 1 : null;
+  const myScore = user ? scores.find((s) => s._id === user.id) : null;
 
   return (
     <div>
-      <h1 className="mb-4">Leaderboard</h1>
-      {scores.length === 0 ? (
-        <div className="alert alert-info">
-          No scores yet. The leaderboard will populate once matchweek results
-          are in.
+      <div className="page-header">
+        <h1 className="page-title">Season Leaderboard</h1>
+        {myScore && (
+          <span style={{ color: "var(--text-muted)", fontSize: "0.9rem" }}>
+            Your rank: <strong style={{ color: "var(--purple-light)" }}>#{myRank}</strong>
+            {" "}· <strong style={{ color: "var(--gold)" }}>{myScore.totalPoints} pts</strong>
+          </span>
+        )}
+      </div>
+
+      {error ? (
+        <div className="alert alert-danger">
+          {error}
+          <button className="btn btn-outline-danger btn-sm ms-3" onClick={() => window.location.reload()}>
+            Retry
+          </button>
         </div>
       ) : (
-        <Leaderboard scores={scores} currentUserId={user?.id} />
+        <div className="card">
+          <div className="card-body p-0">
+            <Leaderboard scores={scores} currentUserId={user?.id} />
+          </div>
+        </div>
       )}
     </div>
   );

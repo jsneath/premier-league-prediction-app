@@ -122,6 +122,83 @@ router.post("/", auth, async (req, res) => {
   }
 });
 
+// GET /api/predictions/matchweek/:matchweek/all - All users' predictions for locked fixtures
+router.get("/matchweek/:matchweek/all", auth, async (req, res) => {
+  try {
+    const matchweek = parseInt(req.params.matchweek);
+    const now = new Date();
+
+    const fixtures = await Fixture.find({ matchweek }).sort({ date: 1 });
+    if (fixtures.length === 0) {
+      return res.status(404).json({ message: "No fixtures found for this matchweek" });
+    }
+
+    const lockedFixtureIds = new Set(
+      fixtures
+        .filter((f) => new Date(f.date).getTime() - now.getTime() <= ONE_HOUR_MS)
+        .map((f) => f._id.toString())
+    );
+
+    const allPredictions = await Prediction.find({ matchweek }).populate("userId", "username");
+
+    const users = allPredictions.map((predDoc) => {
+      const predsMap = {};
+      for (const p of predDoc.predictions) {
+        const fid = p.fixtureId.toString();
+        if (!lockedFixtureIds.has(fid)) continue;
+
+        const fixture = fixtures.find((f) => f._id.toString() === fid);
+        let points = null;
+        if (
+          fixture?.status?.short === "FT" &&
+          fixture.goals.home !== null &&
+          fixture.goals.away !== null
+        ) {
+          const exactMatch =
+            p.predictedHomeScore === fixture.goals.home &&
+            p.predictedAwayScore === fixture.goals.away;
+          const correctResult =
+            (p.predictedHomeScore > p.predictedAwayScore && fixture.goals.home > fixture.goals.away) ||
+            (p.predictedHomeScore < p.predictedAwayScore && fixture.goals.home < fixture.goals.away) ||
+            (p.predictedHomeScore === p.predictedAwayScore && fixture.goals.home === fixture.goals.away);
+
+          if (exactMatch) points = p.isDoublePoints ? 6 : 3;
+          else if (correctResult) points = p.isDoublePoints ? 2 : 1;
+          else points = 0;
+        }
+
+        predsMap[fid] = {
+          predictedHomeScore: p.predictedHomeScore,
+          predictedAwayScore: p.predictedAwayScore,
+          isDoublePoints: p.isDoublePoints,
+          points,
+        };
+      }
+
+      const weeklyTotal = Object.values(predsMap).reduce(
+        (sum, p) => sum + (p.points ?? 0),
+        0
+      );
+
+      return {
+        userId: predDoc.userId._id,
+        username: predDoc.userId.username,
+        predictions: predsMap,
+        weeklyTotal,
+      };
+    });
+
+    res.json({
+      fixtures,
+      lockedFixtureIds: [...lockedFixtureIds],
+      users,
+    });
+  } catch (error) {
+    console.error("GET /predictions/matchweek/:matchweek/all error:", error);
+    res.status(500).json({ message: "Could not load predictions." });
+  }
+});
+
 // GET /api/predictions/:matchweek - Get user's predictions + deadline info
 router.get("/:matchweek", auth, async (req, res) => {
   try {

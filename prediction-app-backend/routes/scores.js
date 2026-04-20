@@ -5,6 +5,7 @@ const Fixture = require("../models/Fixture");
 const Prediction = require("../models/Prediction");
 const Score = require("../models/Score");
 const League = require("../models/League");
+const User = require("../models/User");
 const verifyToken = require("../middleware/verifyToken");
 
 // POST /api/scores/update - Calculate and store scores for completed fixtures
@@ -72,43 +73,39 @@ router.post("/update", async (req, res) => {
   }
 });
 
-// GET /api/scores/leaderboard - Aggregated leaderboard (optional ?leagueId= filter)
+// GET /api/scores/leaderboard - All users ranked by total points (optional ?leagueId= filter)
 router.get("/leaderboard", async (req, res) => {
   try {
-    const pipeline = [];
+    let matchStage = {};
 
-    // If leagueId provided, filter to league members only
     if (req.query.leagueId) {
       const league = await League.findById(req.query.leagueId);
-      if (!league) {
-        return res.status(404).json({ message: "League not found" });
-      }
+      if (!league) return res.status(404).json({ message: "League not found" });
       const memberIds = league.members.map((m) => m.userId);
-      pipeline.push({ $match: { userId: { $in: memberIds } } });
+      matchStage = { _id: { $in: memberIds } };
     }
 
-    pipeline.push(
-      { $group: { _id: "$userId", totalPoints: { $sum: "$points" } } },
+    // Start from User collection so everyone appears even with 0 points
+    const scores = await User.aggregate([
+      { $match: matchStage },
       {
         $lookup: {
-          from: "users",
+          from: "scores",
           localField: "_id",
-          foreignField: "_id",
-          as: "user",
+          foreignField: "userId",
+          as: "scoreEntries",
         },
       },
-      { $unwind: "$user" },
       {
         $project: {
           _id: 1,
-          totalPoints: 1,
-          username: "$user.username",
+          username: 1,
+          totalPoints: { $sum: "$scoreEntries.points" },
         },
       },
-      { $sort: { totalPoints: -1 } }
-    );
+      { $sort: { totalPoints: -1, username: 1 } },
+    ]);
 
-    const scores = await Score.aggregate(pipeline);
     res.json(scores);
   } catch (err) {
     console.error("Leaderboard error:", err);

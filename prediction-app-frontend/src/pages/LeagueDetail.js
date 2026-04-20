@@ -132,17 +132,10 @@ function LeagueDetail() {
           <div className="card mb-3">
             <div className="card-body">
               <h5 className="card-title">Invite Code</h5>
-              <div className="d-flex align-items-center gap-2">
-                <span className="fs-4 fw-bold font-monospace bg-light px-3 py-1 rounded">
-                  {league.inviteCode}
-                </span>
-                <button
-                  className="btn btn-outline-secondary btn-sm"
-                  onClick={copyCode}
-                >
-                  {copied ? "Copied!" : "Copy"}
-                </button>
-              </div>
+              <div className="invite-code-box">{league.inviteCode}</div>
+              <button className="btn btn-outline-secondary w-100 btn-sm" onClick={copyCode}>
+                {copied ? "✓ Copied!" : "Copy Code"}
+              </button>
             </div>
           </div>
 
