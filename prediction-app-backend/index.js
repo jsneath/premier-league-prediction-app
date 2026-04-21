@@ -119,8 +119,8 @@ const updateScores = async () => {
   }
 };
 
-// Refresh fixtures + recalculate scores every 2 hours
-cron.schedule("0 */2 * * *", refreshFixtures);
+cron.schedule("0 * * * *", refreshFixtures);
+refreshFixtures();
 
 app.use("/api/auth", require("./middleware/auth"));
 app.use("/api/fixtures", require("./routes/fixtures"));
