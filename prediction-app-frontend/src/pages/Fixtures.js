@@ -10,14 +10,6 @@ function formatDate(dateStr) {
   });
 }
 
-function StatusPill({ fixture }) {
-  const s = fixture.status?.short;
-  if (["FT","AET","PEN"].includes(s))
-    return <span className="status-ft">FT</span>;
-  if (["1H","HT","2H","ET","BT","P","LIVE"].includes(s))
-    return <span className="status-live">LIVE {fixture.status.elapsed}'</span>;
-  return <span style={{ color: "var(--text-muted)", fontSize: "0.78rem" }}>{formatDate(fixture.date)}</span>;
-}
 
 function Fixtures() {
   const [fixtures, setFixtures] = useState([]);

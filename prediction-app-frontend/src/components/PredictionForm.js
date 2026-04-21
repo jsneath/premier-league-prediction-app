@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../api/axios";
 
-const ONE_HOUR_MS = 60 * 60 * 1000;
 
 const PredictionForm = ({ fixtures, matchweek }) => {
   const [predictions, setPredictions] = useState([]);
