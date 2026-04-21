@@ -46,6 +46,20 @@ router.get("/current", async (req, res) => {
   }
 });
 
+// GET /api/fixtures/upcoming - All unplayed fixtures across all matchweeks, sorted by date
+router.get("/upcoming", async (req, res) => {
+  try {
+    const DONE_STATUSES = ["FT", "AET", "PEN", "PST", "CANC", "ABD", "AWD", "WO"];
+    const fixtures = await Fixture.find({
+      "status.short": { $nin: DONE_STATUSES },
+      date: { $gt: new Date() },
+    }).sort({ date: 1 });
+    res.json(fixtures);
+  } catch (err) {
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
 // POST /api/fixtures/refresh - Manual sync from API-Football (admin use)
 router.post("/refresh", async (req, res) => {
   try {
