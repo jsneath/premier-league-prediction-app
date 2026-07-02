@@ -2,10 +2,10 @@ const express = require("express");
 const router = express.Router();
 const mongoose = require("mongoose");
 const League = require("../models/League");
-const Score = require("../models/Score");
-const User = require("../models/User");
 const verifyToken = require("../middleware/verifyToken");
 const generateInviteCode = require("../utils/generateInviteCode");
+const { leaderboard } = require("../utils/scoring");
+const { CURRENT_SEASON } = require("../utils/season");
 
 // All routes require auth
 router.use(verifyToken);
@@ -127,29 +127,12 @@ router.get("/:id/leaderboard", async (req, res) => {
       return res.status(403).json({ message: "You are not a member of this league" });
     }
 
+    const season = req.query.season
+      ? parseInt(req.query.season)
+      : CURRENT_SEASON;
     const memberIds = league.members.map((m) => m.userId);
 
-    const scores = await User.aggregate([
-      { $match: { _id: { $in: memberIds } } },
-      {
-        $lookup: {
-          from: "scores",
-          localField: "_id",
-          foreignField: "userId",
-          as: "scoreEntries",
-        },
-      },
-      {
-        $project: {
-          _id: 1,
-          username: 1,
-          totalPoints: { $sum: "$scoreEntries.points" },
-        },
-      },
-      { $sort: { totalPoints: -1, username: 1 } },
-    ]);
-
-    res.json(scores);
+    res.json(await leaderboard(season, { _id: { $in: memberIds } }));
   } catch (err) {
     console.error("League leaderboard error:", err);
     res.status(500).json({ message: "Server error" });

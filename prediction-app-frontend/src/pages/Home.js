@@ -8,11 +8,15 @@ function Home() {
   const { user } = useAuth();
   const [scores, setScores] = useState([]);
   const [currentWeek, setCurrentWeek] = useState(null);
+  const [seasonLabel, setSeasonLabel] = useState(null);
   const [scoresError, setScoresError] = useState(false);
 
   useEffect(() => {
     api.get("/api/fixtures/current")
-      .then((res) => setCurrentWeek(res.data.matchweek))
+      .then((res) => {
+        setCurrentWeek(res.data.matchweek);
+        setSeasonLabel(res.data.seasonLabel);
+      })
       .catch(() => {});
 
     if (user) {
@@ -28,6 +32,9 @@ function Home() {
       <div className="hero-section">
         <div className="row align-items-center">
           <div className="col-lg-7">
+            {seasonLabel && (
+              <span className="season-chip season-chip-hero">Season {seasonLabel}</span>
+            )}
             <h1 className="hero-title">Premier League<br />Predictions</h1>
             <p className="hero-subtitle">
               Pick your scores, earn points, and beat your mates all season long.

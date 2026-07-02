@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const cron = require("node-cron");
+const Fixture = require("./models/Fixture");
 const Prediction = require("./models/Prediction");
 const Score = require("./models/Score");
 const refreshFixtures = require("./utils/refreshFixtures");
@@ -23,14 +24,38 @@ app.use(
 );
 app.use(express.json());
 
-// Remove duplicate Score/Prediction docs (keep the newest) so the unique
-// {userId, matchweek} indexes can build, then build them.
+// One-time data migration + index setup:
+// 1. Tag pre-season-support docs with season 2025 (they're all from 2025/26).
+// 2. Remove duplicate Score/Prediction docs (keep the newest).
+// 3. Build the unique {userId, season, matchweek} indexes.
 const ensureIndexes = async () => {
+  // Fixtures saved before the schema had league.season: tag by date
+  // (2025/26 season ended May 2026; 2026/27 starts Aug 2026)
+  const cutoff = new Date("2026-07-01");
+  await Fixture.updateMany(
+    { "league.season": { $exists: false }, date: { $lt: cutoff } },
+    { $set: { "league.season": 2025 } }
+  );
+  await Fixture.updateMany(
+    { "league.season": { $exists: false } },
+    { $set: { "league.season": 2026 } }
+  );
+
   for (const Model of [Score, Prediction]) {
+    const migrated = await Model.updateMany(
+      { season: { $exists: false } },
+      { $set: { season: 2025 } }
+    );
+    if (migrated.modifiedCount > 0) {
+      console.log(
+        `Tagged ${migrated.modifiedCount} ${Model.modelName} doc(s) as season 2025`
+      );
+    }
+
     const dups = await Model.aggregate([
       {
         $group: {
-          _id: { userId: "$userId", matchweek: "$matchweek" },
+          _id: { userId: "$userId", season: "$season", matchweek: "$matchweek" },
           ids: { $push: "$_id" },
           count: { $sum: 1 },
         },

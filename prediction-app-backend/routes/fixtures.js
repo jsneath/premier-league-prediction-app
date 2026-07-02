@@ -3,11 +3,12 @@ const router = express.Router();
 const Fixture = require("../models/Fixture");
 const verifyToken = require("../middleware/verifyToken");
 const refreshFixtures = require("../utils/refreshFixtures");
+const { CURRENT_SEASON, seasonLabel } = require("../utils/season");
 
-// GET /api/fixtures - Read from MongoDB only (fast)
+// GET /api/fixtures - Read from MongoDB only (fast); current season only
 router.get("/", async (req, res) => {
   try {
-    let query = {};
+    let query = { "league.season": CURRENT_SEASON };
     if (req.query.status) {
       query["status.short"] = req.query.status;
     }
@@ -32,15 +33,18 @@ router.get("/current", async (req, res) => {
 
     const active = await Fixture.findOne({
       "status.short": { $nin: DONE_STATUSES },
+      "league.season": CURRENT_SEASON,
     }).sort({ date: 1 });
 
+    const seasonInfo = { season: CURRENT_SEASON, seasonLabel: seasonLabel(CURRENT_SEASON) };
+
     if (active) {
-      return res.json({ matchweek: active.matchweek });
+      return res.json({ matchweek: active.matchweek, ...seasonInfo });
     }
 
     // All fixtures done — return the last matchweek
-    const last = await Fixture.findOne().sort({ matchweek: -1 });
-    res.json({ matchweek: last ? last.matchweek : 1 });
+    const last = await Fixture.findOne({ "league.season": CURRENT_SEASON }).sort({ matchweek: -1 });
+    res.json({ matchweek: last ? last.matchweek : 1, ...seasonInfo });
   } catch (err) {
     console.error("Error getting current matchweek:", err.message);
     res.status(500).json({ msg: "Server error" });
@@ -53,6 +57,7 @@ router.get("/upcoming", async (req, res) => {
     const DONE_STATUSES = ["FT", "AET", "PEN", "PST", "CANC", "ABD", "AWD", "WO"];
     const fixtures = await Fixture.find({
       "status.short": { $nin: DONE_STATUSES },
+      "league.season": CURRENT_SEASON,
       date: { $gt: new Date() },
     }).sort({ date: 1 });
     res.json(fixtures);

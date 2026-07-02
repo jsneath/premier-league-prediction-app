@@ -26,6 +26,7 @@ const fixtureSchema = new mongoose.Schema({
     name: String,
     country: String,
     logo: String,
+    season: Number, // e.g., 2026 = the 2026/27 season
     round: String, // e.g., "Regular Season - 1"
   },
   matchweek: Number, // New: Extracted from round, e.g., 1

@@ -4,6 +4,7 @@ const Prediction = require("../models/Prediction");
 const Fixture = require("../models/Fixture");
 const auth = require("../middleware/verifyToken");
 const { calculatePoints } = require("../utils/scoring");
+const { CURRENT_SEASON } = require("../utils/season");
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -18,7 +19,10 @@ router.post("/", auth, async (req, res) => {
         .json({ message: "Matchweek and predictions are required" });
     }
 
-    const fixtures = await Fixture.find({ matchweek: parseInt(matchweek) });
+    const fixtures = await Fixture.find({
+      matchweek: parseInt(matchweek),
+      "league.season": CURRENT_SEASON,
+    });
     if (fixtures.length === 0) {
       return res
         .status(404)
@@ -74,6 +78,7 @@ router.post("/", auth, async (req, res) => {
     // Load existing doc to check locked predictions too
     let predDoc = await Prediction.findOne({
       userId: req.user.id,
+      season: CURRENT_SEASON,
       matchweek: parseInt(matchweek),
     });
 
@@ -98,6 +103,7 @@ router.post("/", auth, async (req, res) => {
     } else {
       predDoc = new Prediction({
         userId: req.user.id,
+        season: CURRENT_SEASON,
         matchweek: parseInt(matchweek),
         predictions: allPredictions,
       });
@@ -129,7 +135,10 @@ router.get("/matchweek/:matchweek/all", auth, async (req, res) => {
     const matchweek = parseInt(req.params.matchweek);
     const now = new Date();
 
-    const fixtures = await Fixture.find({ matchweek }).sort({ date: 1 });
+    const fixtures = await Fixture.find({
+      matchweek,
+      "league.season": CURRENT_SEASON,
+    }).sort({ date: 1 });
     if (fixtures.length === 0) {
       return res.status(404).json({ message: "No fixtures found for this matchweek" });
     }
@@ -140,7 +149,10 @@ router.get("/matchweek/:matchweek/all", auth, async (req, res) => {
         .map((f) => f._id.toString())
     );
 
-    const allPredictions = await Prediction.find({ matchweek }).populate("userId", "username");
+    const allPredictions = await Prediction.find({
+      matchweek,
+      season: CURRENT_SEASON,
+    }).populate("userId", "username");
 
     const users = allPredictions.map((predDoc) => {
       const predsMap = {};
@@ -190,7 +202,10 @@ router.get("/matchweek/:matchweek/all", auth, async (req, res) => {
 router.get("/:matchweek", auth, async (req, res) => {
   try {
     const matchweek = parseInt(req.params.matchweek);
-    const fixtures = await Fixture.find({ matchweek });
+    const fixtures = await Fixture.find({
+      matchweek,
+      "league.season": CURRENT_SEASON,
+    });
     const now = new Date();
 
     const deadlines = fixtures.map((f) => ({
@@ -201,6 +216,7 @@ router.get("/:matchweek", auth, async (req, res) => {
 
     const prediction = await Prediction.findOne({
       userId: req.user.id,
+      season: CURRENT_SEASON,
       matchweek,
     });
 

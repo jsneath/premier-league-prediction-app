@@ -5,6 +5,24 @@ function RankBadge({ rank }) {
   return <span className="rank-badge rank-other">{rank}</span>;
 }
 
+// Consistent colour per player, derived from their name
+const AVATAR_HUES = [262, 199, 340, 150, 25, 55];
+function Avatar({ name }) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  const hue = AVATAR_HUES[hash % AVATAR_HUES.length];
+  return (
+    <span
+      className="player-avatar"
+      style={{
+        background: `linear-gradient(135deg, hsl(${hue},60%,45%), hsl(${hue},70%,30%))`,
+      }}
+    >
+      {name.charAt(0).toUpperCase()}
+    </span>
+  );
+}
+
 function Leaderboard({ scores, currentUserId }) {
   if (!scores || scores.length === 0) {
     return <p className="text-muted mb-0">No players yet.</p>;
@@ -23,12 +41,16 @@ function Leaderboard({ scores, currentUserId }) {
         <tbody>
           {scores.map((entry, idx) => {
             const isMe = entry._id === currentUserId;
+            const podium = idx < 3 ? `podium-${idx + 1}` : "";
             return (
-              <tr key={entry._id}>
+              <tr key={entry._id} className={podium}>
                 <td><RankBadge rank={idx + 1} /></td>
                 <td>
-                  <span className={isMe ? "fw-bold" : ""}>{entry.username}</span>
-                  {isMe && <span className="ms-2 badge bg-secondary" style={{ fontSize: "0.65rem" }}>you</span>}
+                  <span className="d-inline-flex align-items-center gap-2">
+                    <Avatar name={entry.username} />
+                    <span className={isMe ? "fw-bold" : ""}>{entry.username}</span>
+                    {isMe && <span className="badge bg-secondary" style={{ fontSize: "0.65rem" }}>you</span>}
+                  </span>
                 </td>
                 <td className="text-end">
                   <span
