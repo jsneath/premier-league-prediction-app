@@ -18,4 +18,7 @@ const predictionSchema = new mongoose.Schema({
   submittedAt: { type: Date, default: Date.now },
 });
 
+// One prediction doc per user per matchweek
+predictionSchema.index({ userId: 1, matchweek: 1 }, { unique: true });
+
 module.exports = mongoose.model("Prediction", predictionSchema);

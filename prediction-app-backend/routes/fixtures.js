@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const axios = require("axios");
 const Fixture = require("../models/Fixture");
+const verifyToken = require("../middleware/verifyToken");
+const refreshFixtures = require("../utils/refreshFixtures");
 
 // GET /api/fixtures - Read from MongoDB only (fast)
 router.get("/", async (req, res) => {
@@ -60,49 +61,11 @@ router.get("/upcoming", async (req, res) => {
   }
 });
 
-// POST /api/fixtures/refresh - Manual sync from API-Football (admin use)
-router.post("/refresh", async (req, res) => {
+// POST /api/fixtures/refresh - Manual sync from API-Football (logged-in users only,
+// so strangers can't burn the free API quota)
+router.post("/refresh", verifyToken, async (req, res) => {
   try {
-    let url =
-      "https://api-football-v1.p.rapidapi.com/v3/fixtures?league=39&season=2025";
-
-    const response = await axios.get(url, {
-      headers: {
-        "X-RapidAPI-Key": process.env.API_FOOTBALL_KEY,
-        "X-RapidAPI-Host": "api-football-v1.p.rapidapi.com",
-      },
-    });
-
-    const fixtures = response.data.response;
-    let count = 0;
-
-    for (const fixture of fixtures) {
-      const matchweekMatch = fixture.league.round.match(/\d+/);
-      const matchweek = matchweekMatch ? parseInt(matchweekMatch[0]) : null;
-
-      await Fixture.findOneAndUpdate(
-        { id: fixture.fixture.id },
-        {
-          $set: {
-            id: fixture.fixture.id,
-            referee: fixture.fixture.referee,
-            timezone: fixture.fixture.timezone,
-            date: new Date(fixture.fixture.date),
-            timestamp: fixture.fixture.timestamp,
-            periods: fixture.fixture.periods,
-            venue: fixture.fixture.venue,
-            status: fixture.fixture.status,
-            league: fixture.league,
-            matchweek,
-            teams: fixture.teams,
-            goals: fixture.goals,
-          },
-        },
-        { upsert: true, new: true }
-      );
-      count++;
-    }
-
+    const count = await refreshFixtures();
     res.json({ message: `Refreshed ${count} fixtures` });
   } catch (err) {
     console.error("Refresh error:", err.message);

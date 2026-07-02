@@ -1,75 +1,22 @@
 const express = require("express");
 const router = express.Router();
-const mongoose = require("mongoose");
-const Fixture = require("../models/Fixture");
-const Prediction = require("../models/Prediction");
 const Score = require("../models/Score");
 const League = require("../models/League");
 const User = require("../models/User");
 const verifyToken = require("../middleware/verifyToken");
+const { updateAllScores } = require("../utils/scoring");
 
-// POST /api/scores/update - Calculate and store scores for completed fixtures
+// All score routes require a logged-in user
+router.use(verifyToken);
+
+// POST /api/scores/update - Recalculate scores for completed fixtures
 router.post("/update", async (req, res) => {
   try {
-    // Find all completed fixtures
-    const fixtures = await Fixture.find({ "status.short": "FT" });
-
-    // Get unique matchweeks from completed fixtures
-    const matchweeks = [...new Set(fixtures.map((f) => f.matchweek))];
-
-    for (const matchweek of matchweeks) {
-      const weekFixtures = fixtures.filter((f) => f.matchweek === matchweek);
-
-      // Find all predictions for this matchweek
-      const predictions = await Prediction.find({ matchweek });
-
-      for (const predDoc of predictions) {
-        let totalPoints = 0;
-
-        for (const pred of predDoc.predictions) {
-          // Find the matching fixture
-          const fixture = weekFixtures.find(
-            (f) => f._id.toString() === pred.fixtureId.toString()
-          );
-          if (!fixture) continue;
-
-          const actualHome = fixture.goals.home;
-          const actualAway = fixture.goals.away;
-
-          const correctResult =
-            (pred.predictedHomeScore > pred.predictedAwayScore &&
-              actualHome > actualAway) ||
-            (pred.predictedHomeScore < pred.predictedAwayScore &&
-              actualHome < actualAway) ||
-            (pred.predictedHomeScore === pred.predictedAwayScore &&
-              actualHome === actualAway);
-
-          let points = 0;
-          if (
-            pred.predictedHomeScore === actualHome &&
-            pred.predictedAwayScore === actualAway
-          ) {
-            points = pred.isDoublePoints ? 6 : 3;
-          } else if (correctResult) {
-            points = pred.isDoublePoints ? 2 : 1;
-          }
-
-          totalPoints += points;
-        }
-
-        // Upsert score for this user + matchweek
-        await Score.findOneAndUpdate(
-          { userId: predDoc.userId, matchweek },
-          { $set: { points: totalPoints } },
-          { upsert: true }
-        );
-      }
-    }
-
+    await updateAllScores();
     res.json({ message: "Scores updated successfully" });
   } catch (err) {
     console.error("Score update error:", err);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -81,6 +28,17 @@ router.get("/leaderboard", async (req, res) => {
     if (req.query.leagueId) {
       const league = await League.findById(req.query.leagueId);
       if (!league) return res.status(404).json({ message: "League not found" });
+
+      // Only members can view a league's leaderboard
+      const isMember = league.members.some(
+        (m) => m.userId.toString() === req.user.id
+      );
+      if (!isMember) {
+        return res
+          .status(403)
+          .json({ message: "You are not a member of this league" });
+      }
+
       const memberIds = league.members.map((m) => m.userId);
       matchStage = { _id: { $in: memberIds } };
     }
@@ -109,12 +67,12 @@ router.get("/leaderboard", async (req, res) => {
     res.json(scores);
   } catch (err) {
     console.error("Leaderboard error:", err);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-// GET /api/scores/:matchweek - User's score breakdown for a matchweek
-router.get("/:matchweek", verifyToken, async (req, res) => {
+// GET /api/scores/:matchweek - User's score for a matchweek
+router.get("/:matchweek", async (req, res) => {
   try {
     const score = await Score.findOne({
       userId: req.user.id,
@@ -123,7 +81,7 @@ router.get("/:matchweek", verifyToken, async (req, res) => {
     res.json(score || { points: 0 });
   } catch (err) {
     console.error("Score fetch error:", err);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ message: "Server error" });
   }
 });
 

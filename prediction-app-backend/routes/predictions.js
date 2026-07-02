@@ -3,6 +3,7 @@ const router = express.Router();
 const Prediction = require("../models/Prediction");
 const Fixture = require("../models/Fixture");
 const auth = require("../middleware/verifyToken");
+const { calculatePoints } = require("../utils/scoring");
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -148,24 +149,10 @@ router.get("/matchweek/:matchweek/all", auth, async (req, res) => {
         if (!lockedFixtureIds.has(fid)) continue;
 
         const fixture = fixtures.find((f) => f._id.toString() === fid);
-        let points = null;
-        if (
-          fixture?.status?.short === "FT" &&
-          fixture.goals.home !== null &&
-          fixture.goals.away !== null
-        ) {
-          const exactMatch =
-            p.predictedHomeScore === fixture.goals.home &&
-            p.predictedAwayScore === fixture.goals.away;
-          const correctResult =
-            (p.predictedHomeScore > p.predictedAwayScore && fixture.goals.home > fixture.goals.away) ||
-            (p.predictedHomeScore < p.predictedAwayScore && fixture.goals.home < fixture.goals.away) ||
-            (p.predictedHomeScore === p.predictedAwayScore && fixture.goals.home === fixture.goals.away);
-
-          if (exactMatch) points = p.isDoublePoints ? 6 : 3;
-          else if (correctResult) points = p.isDoublePoints ? 2 : 1;
-          else points = 0;
-        }
+        const points =
+          fixture?.status?.short === "FT"
+            ? calculatePoints(p, fixture.goals.home, fixture.goals.away)
+            : null;
 
         predsMap[fid] = {
           predictedHomeScore: p.predictedHomeScore,

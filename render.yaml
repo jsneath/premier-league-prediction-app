@@ -15,9 +15,9 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
-      - key: EMAIL_USER
+      - key: GMAIL_USER
         sync: false
-      - key: EMAIL_PASS
+      - key: GMAIL_APP_PASSWORD
         sync: false
 
   # Frontend static site

@@ -16,9 +16,24 @@ const loginLimiter = rateLimit({
   message: "Too many login attempts, please try again later",
 });
 
+// Rate limiter for registration
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // 10 accounts per IP per hour
+  message: "Too many accounts created from this IP, please try again later",
+});
+
+// Rate limiter for password reset emails (protects Gmail sending limits)
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // 5 reset requests per IP per hour
+  message: "Too many password reset requests, please try again later",
+});
+
 // Register route
 router.post(
   "/register",
+  registerLimiter,
   [
     body("username")
       .trim()
@@ -66,15 +81,23 @@ router.post(
 
 // Login route
 router.post("/login", loginLimiter, async (req, res) => {
-  const { username, password } = req.body;
-  const user = await User.findOne({ username });
-  if (!user || !(await user.comparePassword(password))) {
-    return res.status(401).json({ message: "Invalid credentials" });
+  try {
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username and password are required" });
+    }
+    const user = await User.findOne({ username });
+    if (!user || !(await user.comparePassword(password))) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+    res.json({ token });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ message: "An error occurred during login" });
   }
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: "7d",
-  });
-  res.json({ token });
 });
 
 // POST /api/auth/refresh - Issue new token if current one is valid
@@ -107,6 +130,7 @@ router.get("/me", verifyToken, async (req, res) => {
 // POST /api/auth/forgot-password
 router.post(
   "/forgot-password",
+  forgotPasswordLimiter,
   [body("email").isEmail().normalizeEmail().withMessage("Invalid email")],
   async (req, res) => {
     const errors = validationResult(req);
