@@ -98,8 +98,9 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ message: "League not found" });
     }
 
+    // m.userId can be null if the member's account was deleted
     const isMember = league.members.some(
-      (m) => m.userId._id.toString() === req.user.id
+      (m) => m.userId?._id?.toString() === req.user.id
     );
     if (!isMember) {
       return res.status(403).json({ message: "You are not a member of this league" });

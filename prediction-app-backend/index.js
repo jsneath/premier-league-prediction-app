@@ -7,6 +7,7 @@ const Prediction = require("./models/Prediction");
 const Score = require("./models/Score");
 const refreshFixtures = require("./utils/refreshFixtures");
 const { updateAllScores } = require("./utils/scoring");
+const { generateMissingCommentaries } = require("./utils/commentary");
 require("dotenv").config();
 
 const app = express();
@@ -81,6 +82,7 @@ const syncFixturesAndScores = async () => {
     console.log(`${count} fixtures refreshed.`);
     await updateAllScores();
     console.log("Scores updated.");
+    await generateMissingCommentaries();
   } catch (err) {
     console.error("Error refreshing fixtures/scores:", err);
   }
@@ -105,6 +107,7 @@ app.use("/api/fixtures", require("./routes/fixtures"));
 app.use("/api/predictions", require("./routes/predictions"));
 app.use("/api/scores", require("./routes/scores"));
 app.use("/api/leagues", require("./routes/leagues"));
+app.use("/api/commentary", require("./routes/commentary"));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

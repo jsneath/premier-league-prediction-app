@@ -19,6 +19,8 @@ services:
         sync: false
       - key: GMAIL_APP_PASSWORD
         sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
 
   # Frontend static site
   - type: web

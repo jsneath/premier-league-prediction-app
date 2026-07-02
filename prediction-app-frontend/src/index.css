@@ -812,6 +812,36 @@ input[type=number].score-input::-webkit-outer-spin-button { opacity: 1; }
 .podium-2 > td { background: linear-gradient(90deg, rgba(148,163,184,0.08), transparent 70%) !important; }
 .podium-3 > td { background: linear-gradient(90deg, rgba(205,124,58,0.08), transparent 70%) !important; }
 
+/* The Pundit — AI weekly report on the Results page */
+.pundit-card {
+  background: linear-gradient(150deg, #1a1030 0%, var(--bg-card) 55%);
+  border: 1px solid rgba(124,58,237,0.35);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+.pundit-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.25rem;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--purple-light);
+  border-bottom: 1px solid rgba(124,58,237,0.25);
+  background: rgba(124,58,237,0.08);
+}
+.pundit-icon { font-size: 1.15rem; }
+.pundit-body {
+  padding: 1.1rem 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--text);
+}
+.pundit-body p { margin-bottom: 0.8rem; }
+.pundit-body p:last-child { margin-bottom: 0; }
+
 /* Mobile tweaks */
 @media (max-width: 576px) {
   .container { padding-left: 0.75rem; padding-right: 0.75rem; }

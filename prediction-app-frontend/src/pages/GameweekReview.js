@@ -11,6 +11,7 @@ function GameweekReview() {
   const [selectedWeek, setSelectedWeek] = useState(parseInt(matchweekParam) || null);
   const [currentWeek, setCurrentWeek] = useState(null);
   const [data, setData] = useState(null);
+  const [commentary, setCommentary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -32,6 +33,7 @@ function GameweekReview() {
     setLoading(true);
     setError(null);
     setData(null);
+    setCommentary(null);
     api
       .get(`/api/predictions/matchweek/${selectedWeek}/all`)
       .then((res) => {
@@ -42,6 +44,12 @@ function GameweekReview() {
         setError(err.response?.data?.message || "Could not load predictions.");
         setLoading(false);
       });
+
+    // Pundit's report — only exists once the gameweek has fully finished
+    api
+      .get(`/api/commentary/${selectedWeek}`)
+      .then((res) => setCommentary(res.data))
+      .catch(() => {});
   }, [selectedWeek, user]);
 
   const changeWeek = (delta) => {
@@ -107,6 +115,21 @@ function GameweekReview() {
           {lockedSet.size === 0 && (
             <div className="alert alert-info">
               Predictions for this gameweek are not yet revealed — they unlock 1 hour before each kickoff.
+            </div>
+          )}
+
+          {/* The Pundit's weekly report */}
+          {commentary && (
+            <div className="pundit-card mb-4">
+              <div className="pundit-header">
+                <span className="pundit-icon">🎙️</span>
+                <span>The Pundit — GW{selectedWeek} Report</span>
+              </div>
+              <div className="pundit-body">
+                {commentary.text.split("\n").filter(Boolean).map((para, i) => (
+                  <p key={i}>{para}</p>
+                ))}
+              </div>
             </div>
           )}
 

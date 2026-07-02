@@ -10,6 +10,8 @@ function LeagueDetail() {
   const navigate = useNavigate();
   const [league, setLeague] = useState(null);
   const [scores, setScores] = useState([]);
+  const [seasons, setSeasons] = useState([]);
+  const [selectedSeason, setSelectedSeason] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -24,18 +26,41 @@ function LeagueDetail() {
 
     Promise.all([
       api.get(`/api/leagues/${id}`),
-      api.get(`/api/leagues/${id}/leaderboard`),
+      api.get("/api/scores/seasons"),
     ])
-      .then(([leagueRes, scoresRes]) => {
+      .then(([leagueRes, seasonsRes]) => {
         setLeague(leagueRes.data);
-        setScores(Array.isArray(scoresRes.data) ? scoresRes.data : []);
-        setLoading(false);
+        const list = Array.isArray(seasonsRes.data) ? seasonsRes.data : [];
+        setSeasons(list);
+        const current = list.find((s) => s.current);
+        setSelectedSeason(current ? current.season : null);
       })
       .catch((err) => {
         setError(err.response?.data?.message || "Could not load league");
         setLoading(false);
       });
   }, [id, user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (selectedSeason === null || !user) return;
+    setLoading(true);
+    api.get(`/api/leagues/${id}/leaderboard?season=${selectedSeason}`)
+      .then((res) => {
+        setScores(Array.isArray(res.data) ? res.data : []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.response?.data?.message || "Could not load league");
+        setLoading(false);
+      });
+  }, [id, selectedSeason, user]);
+
+  const seasonMeta = seasons.find((s) => s.season === selectedSeason);
+  const isHistory = seasonMeta && !seasonMeta.current;
+  const champion =
+    isHistory && scores.length > 0 && scores[0].totalPoints > 0
+      ? scores[0]
+      : null;
 
   const copyCode = () => {
     navigator.clipboard.writeText(league.inviteCode);
@@ -115,7 +140,30 @@ function LeagueDetail() {
         <div className="col-lg-8 mb-4">
           <div className="card">
             <div className="card-body">
-              <h5 className="card-title">Leaderboard</h5>
+              <h5 className="card-title">
+                Leaderboard
+                {seasonMeta && (
+                  <span className="season-chip ms-2">{seasonMeta.label}</span>
+                )}
+              </h5>
+
+              {champion && (
+                <div className="champion-banner mb-3">
+                  <span className="champion-trophy">🏆</span>
+                  <div>
+                    <div className="champion-title">
+                      {seasonMeta.label} Champion
+                    </div>
+                    <div className="champion-name">
+                      {champion.username}
+                      <span className="champion-pts">
+                        {champion.totalPoints} pts
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {scores.length === 0 ? (
                 <p className="text-muted">
                   No scores yet. The leaderboard will populate once matchweek
@@ -123,6 +171,24 @@ function LeagueDetail() {
                 </p>
               ) : (
                 <Leaderboard scores={scores} currentUserId={user?.id} />
+              )}
+
+              {seasons.length > 1 && (
+                <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                  <div className="text-muted small mb-2">Season</div>
+                  <div className="season-switch">
+                    {seasons.map((s) => (
+                      <button
+                        key={s.season}
+                        className={`season-switch-btn ${s.season === selectedSeason ? "active" : ""}`}
+                        onClick={() => setSelectedSeason(s.season)}
+                      >
+                        {s.label}
+                        {s.current ? "" : " · History"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
           </div>
