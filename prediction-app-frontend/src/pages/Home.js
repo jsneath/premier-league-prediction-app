@@ -2,10 +2,14 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useState, useEffect } from "react";
 import Leaderboard from "../components/Leaderboard";
+import LeaguePicker from "../components/LeaguePicker";
+import { useMyLeagues } from "../hooks/useMyLeagues";
 import api from "../api/axios";
 
 function Home() {
   const { user } = useAuth();
+  const { leagues, league, leagueId, setLeagueId, loading: leaguesLoading } =
+    useMyLeagues(user);
   const [scores, setScores] = useState([]);
   const [currentWeek, setCurrentWeek] = useState(null);
   const [seasonLabel, setSeasonLabel] = useState(null);
@@ -18,13 +22,15 @@ function Home() {
         setSeasonLabel(res.data.seasonLabel);
       })
       .catch(() => {});
+  }, []);
 
-    if (user) {
-      api.get("/api/scores/leaderboard")
-        .then((res) => setScores(Array.isArray(res.data) ? res.data : []))
-        .catch(() => setScoresError(true));
-    }
-  }, [user]);
+  useEffect(() => {
+    if (!leagueId) return;
+    setScoresError(false);
+    api.get(`/api/leagues/${leagueId}/leaderboard`)
+      .then((res) => setScores(Array.isArray(res.data) ? res.data : []))
+      .catch(() => setScoresError(true));
+  }, [leagueId]);
 
   return (
     <div>
@@ -88,22 +94,48 @@ function Home() {
 
         <div className="col-lg-7">
           <div className="card h-100">
-            <div className="card-header d-flex justify-content-between align-items-center">
-              <span>Season Leaderboard</span>
-              <Link to="/leaderboard" className="btn btn-outline-secondary btn-sm">View All</Link>
+            <div className="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+              <span>{league ? league.name : "League Table"}</span>
+              {league && (
+                <Link to={`/leagues/${league._id}`} className="btn btn-outline-secondary btn-sm">
+                  View League
+                </Link>
+              )}
             </div>
             <div className="card-body p-0">
               {!user ? (
                 <div className="p-4 text-center text-muted">
-                  <p className="mb-2">Sign in to see the leaderboard.</p>
+                  <p className="mb-2">Sign in to see your league table.</p>
                   <Link to="/login" className="btn btn-primary btn-sm">Login</Link>
                 </div>
+              ) : leaguesLoading ? (
+                <div className="p-4 text-center">
+                  <div className="spinner-border spinner-border-sm" role="status" />
+                </div>
+              ) : leagues.length === 0 ? (
+                <div className="p-4 text-center text-muted">
+                  <p className="mb-3">
+                    You're not in a league yet. Create one for your mates, or join
+                    theirs with an invite code.
+                  </p>
+                  <div className="d-flex gap-2 justify-content-center flex-wrap">
+                    <Link to="/leagues/create" className="btn btn-primary btn-sm">Create League</Link>
+                    <Link to="/leagues/join" className="btn btn-outline-primary btn-sm">Join League</Link>
+                  </div>
+                </div>
               ) : scoresError ? (
-                <div className="p-4 text-muted">Could not load leaderboard — try again later.</div>
+                <div className="p-4 text-muted">Could not load the table — try again later.</div>
               ) : scores.length === 0 ? (
                 <div className="p-4 text-muted">No scores yet. Start predicting!</div>
               ) : (
-                <Leaderboard scores={scores.slice(0, 5)} currentUserId={user?.id} />
+                <>
+                  <Leaderboard scores={scores.slice(0, 5)} currentUserId={user?.id} />
+                  {leagues.length > 1 && (
+                    <div className="p-3 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
+                      <LeaguePicker leagues={leagues} leagueId={leagueId} onChange={setLeagueId} />
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

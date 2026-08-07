@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import LeaguePicker from "../components/LeaguePicker";
+import { useMyLeagues } from "../hooks/useMyLeagues";
 import api from "../api/axios";
 
 function GameweekReview() {
   const { matchweek: matchweekParam } = useParams();
   const { user, loading: authLoading } = useAuth();
+  const { leagues, league, leagueId, setLeagueId, loading: leaguesLoading } =
+    useMyLeagues(user);
   const navigate = useNavigate();
 
   const [selectedWeek, setSelectedWeek] = useState(parseInt(matchweekParam) || null);
@@ -29,13 +33,13 @@ function GameweekReview() {
   }, [matchweekParam]);
 
   useEffect(() => {
-    if (!selectedWeek || !user) return;
+    if (!selectedWeek || !user || !leagueId) return;
     setLoading(true);
     setError(null);
     setData(null);
     setCommentary(null);
     api
-      .get(`/api/predictions/matchweek/${selectedWeek}/all`)
+      .get(`/api/predictions/matchweek/${selectedWeek}/all?leagueId=${leagueId}`)
       .then((res) => {
         setData(res.data);
         setLoading(false);
@@ -47,10 +51,10 @@ function GameweekReview() {
 
     // Pundit's report — only exists once the gameweek has fully finished
     api
-      .get(`/api/commentary/${selectedWeek}`)
+      .get(`/api/commentary/${selectedWeek}?leagueId=${leagueId}`)
       .then((res) => setCommentary(res.data))
       .catch(() => {});
-  }, [selectedWeek, user]);
+  }, [selectedWeek, user, leagueId]);
 
   const changeWeek = (delta) => {
     const next = (selectedWeek || 1) + delta;
@@ -67,8 +71,15 @@ function GameweekReview() {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <h1 className="mb-0">GW{selectedWeek} Results</h1>
+      <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+          <h1 className="mb-0">GW{selectedWeek} Results</h1>
+          {league && (
+            <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+              {league.name}
+            </span>
+          )}
+        </div>
         <div className="d-flex align-items-center gap-2">
           <button
             className="btn btn-outline-secondary btn-sm"
@@ -98,7 +109,22 @@ function GameweekReview() {
         </div>
       </div>
 
-      {loading && (
+      {leagues.length > 1 && (
+        <div className="mb-3">
+          <LeaguePicker leagues={leagues} leagueId={leagueId} onChange={setLeagueId} />
+        </div>
+      )}
+
+      {!leaguesLoading && leagues.length === 0 && (
+        <div className="alert alert-info">
+          Results are shown per league.{" "}
+          <Link to="/leagues/create" className="alert-link">Create a league</Link> or{" "}
+          <Link to="/leagues/join" className="alert-link">join one</Link> to see how
+          you compare with your mates.
+        </div>
+      )}
+
+      {(leaguesLoading || (loading && leagues.length > 0)) && (
         <div className="text-center mt-5">
           <div className="spinner-border" role="status">
             <span className="visually-hidden">Loading...</span>

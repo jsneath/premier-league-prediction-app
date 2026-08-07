@@ -5,6 +5,7 @@ const Fixture = require("../models/Fixture");
 const auth = require("../middleware/verifyToken");
 const { calculatePoints } = require("../utils/scoring");
 const { CURRENT_SEASON } = require("../utils/season");
+const { leagueMateIds, getLeagueIfMember } = require("../utils/leagueMates");
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -149,10 +150,28 @@ router.get("/matchweek/:matchweek/all", auth, async (req, res) => {
         .map((f) => f._id.toString())
     );
 
-    const allPredictions = await Prediction.find({
-      matchweek,
-      season: CURRENT_SEASON,
-    }).populate("userId", "username");
+    // Only ever show predictions from people the viewer shares a league with,
+    // so separate groups of friends stay private from each other.
+    let visibleIds;
+    if (req.query.leagueId) {
+      const league = await getLeagueIfMember(req.query.leagueId, req.user.id);
+      if (!league) {
+        return res
+          .status(403)
+          .json({ message: "You are not a member of this league" });
+      }
+      visibleIds = league.members.map((m) => String(m.userId));
+    } else {
+      visibleIds = await leagueMateIds(req.user.id);
+    }
+
+    const allPredictions = (
+      await Prediction.find({
+        matchweek,
+        season: CURRENT_SEASON,
+        userId: { $in: visibleIds },
+      }).populate("userId", "username")
+    ).filter((p) => p.userId?.username); // drop deleted accounts
 
     const users = allPredictions.map((predDoc) => {
       const predsMap = {};

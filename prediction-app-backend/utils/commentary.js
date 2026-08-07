@@ -1,12 +1,13 @@
 const Anthropic = require("@anthropic-ai/sdk");
 const Fixture = require("../models/Fixture");
 const Prediction = require("../models/Prediction");
+const League = require("../models/League");
 const Commentary = require("../models/Commentary");
 const { calculatePoints, leaderboard } = require("./scoring");
 const { CURRENT_SEASON, seasonLabel } = require("./season");
 
-// Build the data pack Claude needs to write the weekly report
-async function buildWeekSummary(season, matchweek) {
+// Build the data pack Claude needs to write one league's weekly report.
+async function buildWeekSummary(season, matchweek, memberIds) {
   const fixtures = await Fixture.find({
     matchweek,
     "league.season": season,
@@ -16,12 +17,13 @@ async function buildWeekSummary(season, matchweek) {
   const allFinished = fixtures.every((f) => f.status?.short === "FT");
   if (!allFinished) return null;
 
-  let predictions = await Prediction.find({ matchweek, season }).populate(
-    "userId",
-    "username"
-  );
-  // Skip predictions whose user account no longer exists
-  predictions = predictions.filter((p) => p.userId?.username);
+  const predictions = (
+    await Prediction.find({
+      matchweek,
+      season,
+      userId: { $in: memberIds },
+    }).populate("userId", "username")
+  ).filter((p) => p.userId?.username); // skip deleted accounts
   if (predictions.length === 0) return null;
 
   const results = fixtures.map(
@@ -49,30 +51,34 @@ async function buildWeekSummary(season, matchweek) {
       );
     }
 
-    return {
-      username: predDoc.userId.username,
-      weekTotal,
-      picks,
-    };
+    return { username: predDoc.userId.username, weekTotal, picks };
   });
 
-  const standings = await leaderboard(season);
+  const standings = await leaderboard(season, { _id: { $in: memberIds } });
 
-  return { fixtures, results, players, standings };
+  return { results, players, standings };
 }
 
-// Generate and store the pundit report for one finished gameweek.
-// Returns the Commentary doc, or null if the week isn't ready/eligible.
-async function generateCommentary(matchweek, season = CURRENT_SEASON) {
+// Generate and store one league's pundit report for a finished gameweek.
+// Returns the Commentary doc, or null if not ready / not eligible.
+async function generateCommentary(league, matchweek, season = CURRENT_SEASON) {
   if (!process.env.ANTHROPIC_API_KEY) return null;
 
-  const existing = await Commentary.findOne({ season, matchweek });
+  const existing = await Commentary.findOne({
+    leagueId: league._id,
+    season,
+    matchweek,
+  });
   if (existing) return existing;
 
-  const summary = await buildWeekSummary(season, matchweek);
+  const memberIds = league.members.map((m) => m.userId).filter(Boolean);
+  if (memberIds.length === 0) return null;
+
+  const summary = await buildWeekSummary(season, matchweek, memberIds);
   if (!summary) return null;
 
   const dataBlock = [
+    `League: ${league.name}`,
     `Season: ${seasonLabel(season)}, Gameweek ${matchweek}`,
     ``,
     `Results:`,
@@ -104,7 +110,7 @@ async function generateCommentary(matchweek, season = CURRENT_SEASON) {
       "celebrate exact-score hits as moments of genius, and note anything spicy in the season standings (gaps closing, leads extending, someone rooted to the bottom). " +
       "Keep it good-natured — these are friends. No profanity stronger than mild British slang. " +
       "Write 150-250 words of flowing prose in 2-4 short paragraphs. No headings, no bullet points, no markdown, no sign-off. " +
-      "Refer to players by their username exactly as given.",
+      "Only ever mention the players listed in the data. Refer to them by their username exactly as given.",
     messages: [{ role: "user", content: dataBlock }],
   });
 
@@ -118,16 +124,18 @@ async function generateCommentary(matchweek, season = CURRENT_SEASON) {
   if (!text) return null;
 
   const doc = await Commentary.findOneAndUpdate(
-    { season, matchweek },
+    { leagueId: league._id, season, matchweek },
     { $set: { text, generatedAt: new Date() } },
     { upsert: true, new: true }
   );
-  console.log(`Pundit report generated for GW${matchweek} (${seasonLabel(season)})`);
+  console.log(
+    `Pundit report generated for "${league.name}" GW${matchweek} (${seasonLabel(season)})`
+  );
   return doc;
 }
 
-// Called by the hourly cron: find current-season gameweeks that have fully
-// finished with predictions in, but no report yet, and generate them.
+// Called by the hourly cron: for every league, find current-season gameweeks
+// that have fully finished with predictions in but no report yet.
 async function generateMissingCommentaries() {
   if (!process.env.ANTHROPIC_API_KEY) return;
 
@@ -136,14 +144,20 @@ async function generateMissingCommentaries() {
       "league.season": CURRENT_SEASON,
       "status.short": "FT",
     });
+    if (finishedWeeks.length === 0) return;
 
-    for (const matchweek of finishedWeeks) {
-      const covered = await Commentary.findOne({
-        season: CURRENT_SEASON,
-        matchweek,
-      });
-      if (covered) continue;
-      await generateCommentary(matchweek);
+    const leagues = await League.find({});
+
+    for (const league of leagues) {
+      for (const matchweek of finishedWeeks) {
+        const covered = await Commentary.findOne({
+          leagueId: league._id,
+          season: CURRENT_SEASON,
+          matchweek,
+        });
+        if (covered) continue;
+        await generateCommentary(league, matchweek);
+      }
     }
   } catch (err) {
     console.error("Commentary generation error:", err);

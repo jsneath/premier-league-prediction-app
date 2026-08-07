@@ -1,11 +1,10 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import Fixtures from "./pages/Fixtures";
 import Predictions from "./pages/Predictions";
 import Login from "./pages/Login";
-import LeaderboardPage from "./pages/LeaderboardPage";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Leagues from "./pages/Leagues";
@@ -32,7 +31,8 @@ function App() {
             <Route path="/leagues/create" element={<CreateLeague />} />
             <Route path="/leagues/join" element={<JoinLeague />} />
             <Route path="/leagues/:id" element={<LeagueDetail />} />
-            <Route path="/leaderboard" element={<LeaderboardPage />} />
+            {/* Standings live inside leagues now, so old links land there */}
+            <Route path="/leaderboard" element={<Navigate to="/leagues" replace />} />
             <Route path="/gameweek/:matchweek" element={<GameweekReview />} />
             <Route path="/gameweek" element={<GameweekReview />} />
             <Route path="*" element={<div>404 Not Found</div>} />

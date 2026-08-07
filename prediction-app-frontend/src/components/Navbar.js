@@ -40,11 +40,6 @@ function Navbar() {
                 </Link>
               </li>
             )}
-            <li className="nav-item">
-              <Link className={`nav-link ${isActive("/leaderboard")}`} to="/leaderboard" onClick={close}>
-                Leaderboard
-              </Link>
-            </li>
             {user && (
               <li className="nav-item">
                 <Link className={`nav-link ${isActive("/leagues")}`} to="/leagues" onClick={close}>

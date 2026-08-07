@@ -5,6 +5,7 @@ const cron = require("node-cron");
 const Fixture = require("./models/Fixture");
 const Prediction = require("./models/Prediction");
 const Score = require("./models/Score");
+const Commentary = require("./models/Commentary");
 const refreshFixtures = require("./utils/refreshFixtures");
 const { updateAllScores } = require("./utils/scoring");
 const { generateMissingCommentaries } = require("./utils/commentary");
@@ -73,6 +74,14 @@ const ensureIndexes = async () => {
     }
     await Model.syncIndexes();
   }
+
+  // Pundit reports became per-league; drop any pre-league reports and
+  // rebuild the index so each league gets its own report per gameweek.
+  const orphaned = await Commentary.deleteMany({ leagueId: { $exists: false } });
+  if (orphaned.deletedCount > 0) {
+    console.log(`Removed ${orphaned.deletedCount} pre-league pundit report(s)`);
+  }
+  await Commentary.syncIndexes();
 };
 
 const syncFixturesAndScores = async () => {

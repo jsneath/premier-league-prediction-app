@@ -137,31 +137,36 @@ function Fixtures() {
               </div>
             ) : (
               <>
-                <div className="card-header d-flex align-items-center gap-2">
+                <div className="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap">
                   {allFT ? <span className="status-ft">All Finished</span>
                     : hasOpen ? <span className="status-upcoming">Upcoming</span>
                     : <span style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>Predictions Locked</span>}
-                </div>
-                <div>
-                  {sorted.map((f) => <FixtureRow key={f._id} f={f} />)}
-                </div>
-                <div className="card-body">
-                  <div className="d-flex justify-content-center gap-2 flex-wrap">
+
+                  <div className="d-flex gap-2 flex-wrap">
                     {hasOpen && user && (
-                      <Link to={`/predictions/${selectedWeek}`} className="btn btn-primary">Make Predictions</Link>
+                      <Link to={`/predictions/${selectedWeek}`} className="btn btn-primary btn-sm">
+                        Make Predictions
+                      </Link>
                     )}
                     {hasOpen && !user && (
-                      <Link to="/login" className="btn btn-outline-primary">Login to Predict</Link>
+                      <Link to="/login" className="btn btn-outline-primary btn-sm">Login to Predict</Link>
                     )}
                     {user && (
-                      <Link to={`/gameweek/${selectedWeek}`} className="btn btn-outline-secondary">View Results</Link>
+                      <Link to={`/gameweek/${selectedWeek}`} className="btn btn-outline-secondary btn-sm">
+                        View Results
+                      </Link>
                     )}
                   </div>
-                  {!hasOpen && !allFT && (
-                    <p className="text-muted text-center small mt-2 mb-0">
+                </div>
+                {!hasOpen && !allFT && (
+                  <div className="px-3 pt-2">
+                    <p className="text-muted small mb-0">
                       All predictions locked — kickoffs are within 1 hour.
                     </p>
-                  )}
+                  </div>
+                )}
+                <div>
+                  {sorted.map((f) => <FixtureRow key={f._id} f={f} />)}
                 </div>
               </>
             )}
