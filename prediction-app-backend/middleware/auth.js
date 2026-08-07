@@ -36,16 +36,27 @@ router.post(
   registerLimiter,
   [
     body("username")
+      .isString()
+      .withMessage("Username must be text")
+      .bail()
       .trim()
-      .isLength({ min: 3 })
-      .withMessage("Username must be at least 3 characters long"),
+      .isLength({ min: 3, max: 20 })
+      .withMessage("Username must be 3-20 characters long")
+      .matches(/^[a-zA-Z0-9_-]+$/)
+      .withMessage("Username can only contain letters, numbers, - and _"),
     body("email")
+      .isString()
+      .withMessage("Email must be text")
+      .bail()
       .isEmail()
       .normalizeEmail()
       .withMessage("Invalid email format"),
     body("password")
-      .isLength({ min: 6 })
-      .withMessage("Password must be at least 6 characters long"),
+      .isString()
+      .withMessage("Password must be text")
+      .bail()
+      .isLength({ min: 8, max: 200 })
+      .withMessage("Password must be at least 8 characters long"),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -83,6 +94,10 @@ router.post(
 router.post("/login", loginLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
+    // Must be strings — objects here would become MongoDB query operators
+    if (typeof username !== "string" || typeof password !== "string") {
+      return res.status(400).json({ message: "Username and password are required" });
+    }
     if (!username || !password) {
       return res.status(400).json({ message: "Username and password are required" });
     }
@@ -182,10 +197,14 @@ router.post(
 // POST /api/auth/reset-password/:token
 router.post(
   "/reset-password/:token",
+  forgotPasswordLimiter,
   [
     body("password")
-      .isLength({ min: 6 })
-      .withMessage("Password must be at least 6 characters long"),
+      .isString()
+      .withMessage("Password must be text")
+      .bail()
+      .isLength({ min: 8, max: 200 })
+      .withMessage("Password must be at least 8 characters long"),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -222,17 +241,5 @@ router.post(
     }
   }
 );
-
-// Dev-only mock login route
-router.get("/dev-login", (req, res) => {
-  if (process.env.NODE_ENV !== "development") {
-    return res.status(403).json({ message: "Dev mode only" });
-  }
-  const mockUserId = "66b3e8f5a4b5c1234567890";
-  const token = jwt.sign({ id: mockUserId }, process.env.JWT_SECRET, {
-    expiresIn: "7d",
-  });
-  res.json({ token });
-});
 
 module.exports = router;

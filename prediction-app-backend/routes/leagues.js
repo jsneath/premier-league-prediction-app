@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const mongoose = require("mongoose");
+const rateLimit = require("express-rate-limit");
 const League = require("../models/League");
 const verifyToken = require("../middleware/verifyToken");
 const generateInviteCode = require("../utils/generateInviteCode");
@@ -9,6 +9,13 @@ const { CURRENT_SEASON } = require("../utils/season");
 
 // All routes require auth
 router.use(verifyToken);
+
+// Stops someone guessing their way into a private league by trying invite codes
+const joinLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 20, // 20 join attempts per IP per hour
+  message: { message: "Too many join attempts, please try again later" },
+});
 
 // POST /api/leagues - Create a league
 router.post("/", async (req, res) => {
@@ -40,22 +47,22 @@ router.post("/", async (req, res) => {
 });
 
 // POST /api/leagues/join - Join a league by invite code
-router.post("/join", async (req, res) => {
+router.post("/join", joinLimiter, async (req, res) => {
   try {
     const { inviteCode } = req.body;
-    if (!inviteCode) {
+    if (typeof inviteCode !== "string" || !inviteCode.trim()) {
       return res.status(400).json({ message: "Invite code is required" });
     }
 
     const league = await League.findOne({
-      inviteCode: inviteCode.toUpperCase(),
+      inviteCode: inviteCode.trim().toUpperCase(),
     });
     if (!league) {
       return res.status(404).json({ message: "Invalid invite code" });
     }
 
     const alreadyMember = league.members.some(
-      (m) => m.userId.toString() === req.user.id
+      (m) => String(m.userId) === req.user.id
     );
     if (alreadyMember) {
       return res
@@ -122,7 +129,7 @@ router.get("/:id/leaderboard", async (req, res) => {
     }
 
     const isMember = league.members.some(
-      (m) => m.userId.toString() === req.user.id
+      (m) => String(m.userId) === req.user.id
     );
     if (!isMember) {
       return res.status(403).json({ message: "You are not a member of this league" });
@@ -149,7 +156,7 @@ router.delete("/:id", async (req, res) => {
     }
 
     const member = league.members.find(
-      (m) => m.userId.toString() === req.user.id
+      (m) => String(m.userId) === req.user.id
     );
     if (!member || member.role !== "admin") {
       return res
@@ -174,7 +181,7 @@ router.delete("/:id/leave", async (req, res) => {
     }
 
     const memberIdx = league.members.findIndex(
-      (m) => m.userId.toString() === req.user.id
+      (m) => String(m.userId) === req.user.id
     );
     if (memberIdx === -1) {
       return res
@@ -187,7 +194,7 @@ router.delete("/:id/leave", async (req, res) => {
     // If admin is leaving and there are other members, transfer admin
     if (member.role === "admin" && league.members.length > 1) {
       const nextAdmin = league.members.find(
-        (m) => m.userId.toString() !== req.user.id
+        (m) => String(m.userId) !== req.user.id
       );
       if (nextAdmin) nextAdmin.role = "admin";
     }

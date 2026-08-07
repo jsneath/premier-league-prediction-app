@@ -1,1 +1,7 @@
+node_modules/
+
+# Never commit real secrets. .env.example is the safe template and is
+# force-included below.
 .env
+.env.*
+!.env.example

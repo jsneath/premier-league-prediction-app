@@ -93,7 +93,10 @@ function Login() {
               <div className="mb-3">
                 <label className="form-label">Username</label>
                 <input type="text" className="form-control" value={username}
-                  onChange={(e) => setUsername(e.target.value)} required minLength={3} autoFocus />
+                  onChange={(e) => setUsername(e.target.value)} required minLength={3} maxLength={20}
+                  pattern="[a-zA-Z0-9_\-]+"
+                  title="Letters, numbers, - and _ only"
+                  autoFocus />
               </div>
               <div className="mb-3">
                 <label className="form-label">Email</label>
@@ -103,7 +106,10 @@ function Login() {
               <div className="mb-4">
                 <label className="form-label">Password</label>
                 <input type="password" className="form-control" value={password}
-                  onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                  onChange={(e) => setPassword(e.target.value)} required minLength={8} />
+                <div className="form-text" style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
+                  At least 8 characters.
+                </div>
               </div>
               <button type="submit" className="btn btn-success w-100 btn-lg" disabled={loading}>
                 {loading ? <><span className="spinner-border spinner-border-sm me-2"></span>Registering…</> : "Create Account"}
