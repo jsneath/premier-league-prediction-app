@@ -23,7 +23,9 @@ async function buildWeekSummary(season, matchweek, memberIds) {
       season,
       userId: { $in: memberIds },
     }).populate("userId", "username")
-  ).filter((p) => p.userId?.username); // skip deleted accounts
+    // Skip deleted accounts and empty records — the pundit should only talk
+    // about players who actually put predictions in.
+  ).filter((p) => p.userId?.username && p.predictions.length > 0);
   if (predictions.length === 0) return null;
 
   const results = fixtures.map(

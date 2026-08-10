@@ -6,6 +6,7 @@ const auth = require("../middleware/verifyToken");
 const { calculatePoints } = require("../utils/scoring");
 const { CURRENT_SEASON } = require("../utils/season");
 const { leagueMateIds, getLeagueIfMember } = require("../utils/leagueMates");
+const { mergePredictions } = require("../utils/mergePredictions");
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
 
@@ -48,80 +49,85 @@ router.post("/", auth, async (req, res) => {
       });
     }
 
-    // Filter to only open predictions and validate their scores
-    const openPredictions = [];
-    for (const pred of predictions) {
-      if (!openFixtureIds.has(pred.fixtureId)) continue;
-
-      const home = parseInt(pred.predictedHomeScore);
-      const away = parseInt(pred.predictedAwayScore);
-      if (isNaN(home) || isNaN(away) || home < 0 || away < 0) {
-        return res.status(400).json({
-          message: "Please enter a valid score (0 or above) for all open fixtures",
-        });
-      }
-
-      openPredictions.push({
-        fixtureId: pred.fixtureId,
-        predictedHomeScore: home,
-        predictedAwayScore: away,
-        isDoublePoints: !!pred.isDoublePoints,
-      });
-    }
-
-    if (openPredictions.length === 0) {
-      return res.status(400).json({
-        message: "No valid predictions for open fixtures were submitted",
-      });
-    }
-
-    // Validate exactly one double points pick across ALL predictions (open + locked)
-    // Load existing doc to check locked predictions too
     let predDoc = await Prediction.findOne({
       userId: req.user.id,
       season: CURRENT_SEASON,
       matchweek: parseInt(matchweek),
     });
 
-    const previouslyLocked = predDoc
-      ? predDoc.predictions.filter(
-          (p) => !openFixtureIds.has(p.fixtureId.toString())
-        )
-      : [];
+    const result = mergePredictions({
+      existing: predDoc ? predDoc.predictions : [],
+      submitted: predictions,
+      openFixtureIds,
+    });
 
-    const allPredictions = [...previouslyLocked, ...openPredictions];
-    const doubleCount = allPredictions.filter((p) => p.isDoublePoints).length;
-    if (doubleCount !== 1) {
-      return res
-        .status(400)
-        .json({ message: "Select exactly one match for double points" });
+    if (result.error) {
+      return res.status(400).json({ message: result.error });
     }
 
-    // Save
-    if (predDoc) {
-      predDoc.predictions = allPredictions;
-      predDoc.submittedAt = Date.now();
-    } else {
-      predDoc = new Prediction({
-        userId: req.user.id,
-        season: CURRENT_SEASON,
-        matchweek: parseInt(matchweek),
-        predictions: allPredictions,
+    const {
+      predictions: allPredictions,
+      filledIn,
+      clearedOut,
+      doubleCount,
+    } = result;
+
+    if (filledIn === 0 && clearedOut === 0) {
+      return res.status(400).json({
+        message: "Nothing to save — enter a score for at least one match.",
       });
     }
 
-    await predDoc.save();
-
-    const lockedCount = predictions.filter(
-      (p) => !openFixtureIds.has(p.fixtureId)
-    ).length;
-    const savedCount = openPredictions.length;
-    let msg = `${savedCount} prediction${savedCount !== 1 ? "s" : ""} saved!`;
-    if (lockedCount > 0) {
-      msg += ` (${lockedCount} fixture${lockedCount !== 1 ? "s" : ""} already locked)`;
+    if (allPredictions.length === 0) {
+      // Everything was cleared — drop the record entirely rather than leaving
+      // an empty one behind, which would show the player on the results page
+      // with no picks.
+      if (predDoc) await predDoc.deleteOne();
+    } else {
+      if (predDoc) {
+        predDoc.predictions = allPredictions;
+        predDoc.submittedAt = Date.now();
+      } else {
+        predDoc = new Prediction({
+          userId: req.user.id,
+          season: CURRENT_SEASON,
+          matchweek: parseInt(matchweek),
+          predictions: allPredictions,
+        });
+      }
+      await predDoc.save();
     }
 
-    res.json({ message: msg });
+    // Tell them exactly where they stand: what is saved, and what is still
+    // open to fill in later.
+    const savedOpen = allPredictions.filter((p) =>
+      openFixtureIds.has(p.fixtureId.toString())
+    ).length;
+    const stillOpen = openFixtureIds.size - savedOpen;
+
+    let msg;
+    if (savedOpen === 0) {
+      msg = "Predictions cleared. You can enter them again any time before kickoff.";
+    } else {
+      msg = `Saved — ${savedOpen} of ${openFixtureIds.size} open match${
+        openFixtureIds.size !== 1 ? "es" : ""
+      } predicted.`;
+      if (stillOpen > 0) {
+        msg += ` You can fill in the other ${stillOpen} any time before ${
+          stillOpen === 1 ? "it kicks" : "they kick"
+        } off.`;
+      }
+      if (doubleCount === 0) {
+        msg += " Don't forget your ⚡ double points pick.";
+      }
+    }
+
+    res.json({
+      message: msg,
+      savedOpen,
+      totalOpen: openFixtureIds.size,
+      hasDoublePick: doubleCount === 1,
+    });
   } catch (error) {
     console.error("POST /predictions error:", error);
     res.status(500).json({
@@ -171,7 +177,9 @@ router.get("/matchweek/:matchweek/all", auth, async (req, res) => {
         season: CURRENT_SEASON,
         userId: { $in: visibleIds },
       }).populate("userId", "username")
-    ).filter((p) => p.userId?.username); // drop deleted accounts
+      // Skip deleted accounts, and anyone whose record is empty — they
+      // haven't actually predicted anything.
+    ).filter((p) => p.userId?.username && p.predictions.length > 0);
 
     const users = allPredictions.map((predDoc) => {
       const predsMap = {};

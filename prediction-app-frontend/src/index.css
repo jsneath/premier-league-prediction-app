@@ -812,6 +812,64 @@ input[type=number].score-input::-webkit-outer-spin-button { opacity: 1; }
 .podium-2 > td { background: linear-gradient(90deg, rgba(148,163,184,0.08), transparent 70%) !important; }
 .podium-3 > td { background: linear-gradient(90deg, rgba(205,124,58,0.08), transparent 70%) !important; }
 
+/* Prediction progress — partial saving is encouraged, so show how far along
+   the player is and what is still outstanding. */
+.predict-progress {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+.predict-progress-hint {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+.predict-progress-warn {
+  color: var(--gold);
+  font-weight: 600;
+}
+.predict-progress-bar {
+  margin-top: 0.6rem;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.predict-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--purple), var(--purple-light));
+  transition: width 0.25s ease;
+}
+
+/* Per-match "predicted / not yet" tag */
+.predict-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.2em 0.55em;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.predict-tag-done {
+  background: rgba(16,185,129,0.15);
+  border: 1px solid rgba(16,185,129,0.35);
+  color: #6ee7b7;
+}
+.predict-tag-todo {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+/* Unfilled matches get a subtle nudge without shouting */
+.prediction-card.unpredicted {
+  border-left: 3px solid rgba(124,58,237,0.35);
+}
+
 /* The Pundit — AI weekly report on the Results page */
 .pundit-card {
   background: linear-gradient(150deg, #1a1030 0%, var(--bg-card) 55%);
