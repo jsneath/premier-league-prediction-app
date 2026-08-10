@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Crest from "./Crest";
 
 function Navbar() {
   const { user, logout } = useAuth();
@@ -13,8 +14,10 @@ function Navbar() {
     <nav className="navbar navbar-expand-lg">
       <div className="container">
         <Link className="navbar-brand" to="/" onClick={close}>
-          <span className="brand-icon">⚽</span>
-          PL Predictions
+          <Crest size={30} />
+          <span className="brand-text">
+            PL <span className="brand-accent">Predictions</span>
+          </span>
         </Link>
 
         <button

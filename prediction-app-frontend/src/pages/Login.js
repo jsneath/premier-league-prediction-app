@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import Crest from "../components/Crest";
 
 function Login() {
   const [activeTab, setActiveTab] = useState("login");
@@ -40,8 +41,10 @@ function Login() {
   return (
     <div className="auth-card">
       <div className="auth-logo">
-        <span className="auth-logo-icon">⚽</span>
-        <span className="auth-logo-title">PL Predictions</span>
+        <Crest size={62} animated />
+        <span className="auth-logo-title">
+          PL <span className="brand-accent">Predictions</span>
+        </span>
       </div>
 
       <div className="card">

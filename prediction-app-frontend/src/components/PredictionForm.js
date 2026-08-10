@@ -233,7 +233,7 @@ const PredictionForm = ({ fixtures, matchweek }) => {
                 />
                 <span className="double-points-label">
                   ⚡ Double Points
-                  <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 400, fontSize: "0.78rem" }}>
+                  <span className="double-points-hint">
                     {pred?.isDoublePoints
                       ? "— click again to un-pick"
                       : "— pick one match to double your points this week"}

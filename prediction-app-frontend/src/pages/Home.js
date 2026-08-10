@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { useState, useEffect } from "react";
 import Leaderboard from "../components/Leaderboard";
 import LeaguePicker from "../components/LeaguePicker";
+import Reveal from "../components/Reveal";
 import { useMyLeagues } from "../hooks/useMyLeagues";
 import api from "../api/axios";
 
@@ -41,9 +42,13 @@ function Home() {
             {seasonLabel && (
               <span className="season-chip season-chip-hero">Season {seasonLabel}</span>
             )}
-            <h1 className="hero-title">Premier League<br />Predictions</h1>
+            <h1 className="hero-title">
+              Premier League<br />
+              <span className="accent">Predictions</span>
+            </h1>
             <p className="hero-subtitle">
-              Pick your scores, earn points, and beat your mates all season long.
+              Call the scores, bank the points, and settle it with your mates
+              over thirty-eight gameweeks.
             </p>
             <div className="d-flex gap-2 flex-wrap">
               {currentWeek && (
@@ -69,6 +74,7 @@ function Home() {
       {/* Scoring rules + leaderboard */}
       <div className="row g-3">
         <div className="col-lg-5">
+          <Reveal className="h-100">
           <div className="card h-100">
             <div className="card-header">How Scoring Works</div>
             <div className="card-body d-flex flex-column gap-2">
@@ -81,18 +87,20 @@ function Home() {
                 <span className="scoring-pill-label">pt for correct result (win/draw/loss)</span>
               </div>
               <div className="scoring-pill">
-                <span className="scoring-pill-points" style={{ color: "var(--purple-light)", fontSize: "1.1rem" }}>×2</span>
+                <span className="scoring-pill-points" style={{ color: "var(--gold)", fontSize: "1.25rem" }}>×2</span>
                 <span className="scoring-pill-label">Double Points — pick one match per week</span>
               </div>
               <div className="scoring-pill" style={{ marginTop: "auto" }}>
-                <span className="scoring-pill-points" style={{ fontSize: "1rem" }}>⏰</span>
+                <span className="scoring-pill-points" style={{ fontSize: "1.1rem" }}>⏰</span>
                 <span className="scoring-pill-label">Predictions lock 1 hour before kickoff</span>
               </div>
             </div>
           </div>
+          </Reveal>
         </div>
 
         <div className="col-lg-7">
+          <Reveal delay={90} className="h-100">
           <div className="card h-100">
             <div className="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
               <span>{league ? league.name : "League Table"}</span>
@@ -139,6 +147,7 @@ function Home() {
               )}
             </div>
           </div>
+          </Reveal>
         </div>
       </div>
     </div>

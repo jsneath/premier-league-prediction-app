@@ -1,12 +1,12 @@
+import CountUp from "./CountUp";
+
 function RankBadge({ rank }) {
-  if (rank === 1) return <span className="rank-badge rank-1">🥇</span>;
-  if (rank === 2) return <span className="rank-badge rank-2">🥈</span>;
-  if (rank === 3) return <span className="rank-badge rank-3">🥉</span>;
+  if (rank <= 3) return <span className={`rank-badge rank-${rank}`}>{rank}</span>;
   return <span className="rank-badge rank-other">{rank}</span>;
 }
 
 // Consistent colour per player, derived from their name
-const AVATAR_HUES = [262, 199, 340, 150, 25, 55];
+const AVATAR_HUES = [78, 205, 340, 150, 25, 262];
 function Avatar({ name }) {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
@@ -53,17 +53,12 @@ function Leaderboard({ scores, currentUserId }) {
                   </span>
                 </td>
                 <td className="text-end">
-                  <span
-                    className="fw-bold"
-                    style={{
-                      color: idx === 0 ? "var(--gold)" : idx === 1 ? "#94a3b8" : idx === 2 ? "#cd7c3a" : "var(--text)",
-                      fontFamily: "Oswald, sans-serif",
-                      fontSize: "1rem",
-                    }}
-                  >
-                    {entry.totalPoints}
-                  </span>
-                  <span style={{ color: "var(--text-muted)", fontSize: "0.75rem", marginLeft: "2px" }}>pts</span>
+                  <CountUp
+                    value={entry.totalPoints}
+                    className="points-value"
+                    // top three get the medal colours, everyone else stays neutral
+                  />
+                  <span style={{ color: "var(--text-muted)", fontSize: "0.72rem", marginLeft: "3px" }}>pts</span>
                 </td>
               </tr>
             );
