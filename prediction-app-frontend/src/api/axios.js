@@ -13,11 +13,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// On 401 response: clear token and redirect to login
+// Sign the user out only when their session itself is no longer valid — the
+// server marks those responses with code "token_invalid". A 401 from getting
+// your current password wrong on the account page must stay an ordinary form
+// error, not an unexpected logout.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const sessionExpired =
+      error.response?.status === 401 &&
+      error.response?.data?.code === "token_invalid";
+
+    if (sessionExpired) {
       localStorage.removeItem("token");
       if (window.location.pathname !== "/login") {
         window.location.href = "/login?expired=true";

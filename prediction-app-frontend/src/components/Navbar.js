@@ -56,17 +56,24 @@ function Navbar() {
             {user ? (
               <>
                 <li className="nav-item">
-                  <span className="nav-link" style={{ color: "#a78bfa", fontSize: "0.85rem", fontWeight: 600 }}>
-                    👤 {user.username}
-                  </span>
+                  <Link
+                    className={`nav-user ${isActive("/account")}`}
+                    to="/account"
+                    onClick={close}
+                    title="Account settings"
+                  >
+                    <span className="nav-user-avatar">
+                      {user.username.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="nav-user-name">{user.username}</span>
+                  </Link>
                 </li>
                 <li className="nav-item">
                   <button
                     className="btn btn-outline-secondary btn-sm"
                     onClick={() => { logout(); close(); }}
-                    style={{ fontSize: "0.8rem" }}
                   >
-                    Logout
+                    Log Out
                   </button>
                 </li>
               </>

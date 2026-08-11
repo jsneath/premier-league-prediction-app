@@ -5,6 +5,7 @@ import Home from "./pages/Home";
 import Fixtures from "./pages/Fixtures";
 import Predictions from "./pages/Predictions";
 import Login from "./pages/Login";
+import Account from "./pages/Account";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Leagues from "./pages/Leagues";
@@ -25,6 +26,7 @@ function App() {
             <Route path="/predictions/:matchweek" element={<Predictions />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Login />} />
+            <Route path="/account" element={<Account />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password/:token" element={<ResetPassword />} />
             <Route path="/leagues" element={<Leagues />} />

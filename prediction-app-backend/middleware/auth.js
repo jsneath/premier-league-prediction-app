@@ -30,6 +30,14 @@ const forgotPasswordLimiter = rateLimit({
   message: "Too many password reset requests, please try again later",
 });
 
+// Account changes ask for the current password, so throttle them the same way
+// as login to stop anyone grinding through guesses.
+const accountLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: "Too many account update attempts, please try again later",
+});
+
 // Register route
 router.post(
   "/register",
@@ -141,6 +149,125 @@ router.get("/me", verifyToken, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// PATCH /api/auth/profile - Change display name and/or email.
+// The current password is required so that someone who gets hold of a signed-in
+// session can't quietly move the account's recovery address to their own.
+router.patch(
+  "/profile",
+  verifyToken,
+  accountLimiter,
+  [
+    body("username")
+      .isString().withMessage("Username must be text").bail()
+      .trim()
+      .isLength({ min: 3, max: 20 })
+      .withMessage("Username must be 3-20 characters long")
+      .matches(/^[a-zA-Z0-9_-]+$/)
+      .withMessage("Username can only contain letters, numbers, - and _"),
+    body("email")
+      .isString().withMessage("Email must be text").bail()
+      .isEmail().normalizeEmail().withMessage("Invalid email format"),
+    body("currentPassword")
+      .isString().withMessage("Enter your current password").bail()
+      .notEmpty().withMessage("Enter your current password"),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: errors.array()[0].msg });
+    }
+
+    try {
+      const user = await User.findById(req.user.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      if (!(await user.comparePassword(req.body.currentPassword))) {
+        return res.status(401).json({ message: "That password isn't right" });
+      }
+
+      const { username, email } = req.body;
+
+      // Only complain about clashes with *other* people's accounts
+      if (username !== user.username) {
+        const taken = await User.findOne({ username, _id: { $ne: user._id } });
+        if (taken) return res.status(400).json({ message: "That username is already taken" });
+      }
+      if (email !== user.email) {
+        const taken = await User.findOne({ email, _id: { $ne: user._id } });
+        if (taken) return res.status(400).json({ message: "That email is already in use" });
+      }
+
+      const changed = [];
+      if (username !== user.username) changed.push("name");
+      if (email !== user.email) changed.push("email");
+
+      user.username = username;
+      user.email = email;
+      await user.save();
+
+      res.json({
+        message: changed.length
+          ? `Your ${changed.join(" and ")} ${changed.length > 1 ? "have" : "has"} been updated.`
+          : "Nothing to change — those details are already saved.",
+        user: { id: user._id, username: user.username, email: user.email },
+      });
+    } catch (err) {
+      console.error("Profile update error:", err);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
+
+// POST /api/auth/change-password - Set a new password from inside the app.
+// This is the practical way to change a password here, since the emailed reset
+// link can't be delivered from the current host.
+router.post(
+  "/change-password",
+  verifyToken,
+  accountLimiter,
+  [
+    body("currentPassword")
+      .isString().withMessage("Enter your current password").bail()
+      .notEmpty().withMessage("Enter your current password"),
+    body("newPassword")
+      .isString().withMessage("Password must be text").bail()
+      .isLength({ min: 8, max: 200 })
+      .withMessage("New password must be at least 8 characters long"),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: errors.array()[0].msg });
+    }
+
+    try {
+      const user = await User.findById(req.user.id);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      if (!(await user.comparePassword(req.body.currentPassword))) {
+        return res.status(401).json({ message: "That password isn't right" });
+      }
+      if (req.body.currentPassword === req.body.newPassword) {
+        return res.status(400).json({ message: "That's already your password — pick a new one" });
+      }
+
+      user.password = await bcrypt.hash(req.body.newPassword, 10);
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+
+      // Hand back a fresh token so the current session carries on working
+      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+        expiresIn: "7d",
+      });
+      res.json({ message: "Password changed.", token });
+    } catch (err) {
+      console.error("Change password error:", err);
+      res.status(500).json({ message: "Server error" });
+    }
+  }
+);
 
 // POST /api/auth/forgot-password
 router.post(

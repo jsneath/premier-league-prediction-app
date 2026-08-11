@@ -185,6 +185,47 @@ a:hover { color: var(--lime-bright); }
 }
 .nav-link:hover, .nav-link.active { color: #fff !important; background: transparent; }
 .nav-link:hover::after, .nav-link.active::after { transform: scaleX(1); }
+/* Signed-in user chip — a real link through to account settings */
+.nav-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.75rem 0.3rem 0.3rem;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  color: var(--text) !important;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all var(--transition);
+}
+.nav-user:hover, .nav-user.active {
+  background: rgba(199,240,74,0.1);
+  border-color: rgba(199,240,74,0.4);
+  color: #fff !important;
+}
+.nav-user-avatar {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--lime), var(--lime-dim));
+  color: #06131F;
+  font-size: 0.74rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.nav-user-name { line-height: 1; }
+
+/* Helper text under form fields */
+.form-hint {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-top: 0.35rem;
+  line-height: 1.45;
+}
+
 .navbar-toggler { border-color: rgba(255,255,255,0.16); padding: 0.3rem 0.55rem; }
 .navbar-toggler:focus { box-shadow: 0 0 0 3px rgba(199,240,74,0.25); }
 .navbar-toggler-icon { filter: invert(1); }

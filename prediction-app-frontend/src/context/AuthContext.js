@@ -51,8 +51,20 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  // Used by the account page after saving profile details
+  const updateUser = (updated) => setUser(updated);
+
+  // Used after changing password — the server issues a fresh token so the
+  // current session carries on working
+  const replaceToken = (newToken) => {
+    localStorage.setItem("token", newToken);
+    setToken(newToken);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{ user, token, loading, login, register, logout, updateUser, replaceToken }}
+    >
       {children}
     </AuthContext.Provider>
   );
