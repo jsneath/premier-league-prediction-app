@@ -2,10 +2,12 @@ const express = require("express");
 const router = express.Router();
 const rateLimit = require("express-rate-limit");
 const League = require("../models/League");
+const Score = require("../models/Score");
 const verifyToken = require("../middleware/verifyToken");
 const generateInviteCode = require("../utils/generateInviteCode");
 const { leaderboard } = require("../utils/scoring");
-const { CURRENT_SEASON } = require("../utils/season");
+const { CURRENT_SEASON, seasonLabel, seasonForDate } = require("../utils/season");
+const { getLeagueIfMember } = require("../utils/leagueMates");
 
 // All routes require auth
 router.use(verifyToken);
@@ -16,6 +18,20 @@ const joinLimiter = rateLimit({
   max: 20, // 20 join attempts per IP per hour
   message: { message: "Too many join attempts, please try again later" },
 });
+
+// The seasons a league can legitimately show. Always the current one, plus any
+// earlier season that both (a) started after the league was created and
+// (b) actually has scores recorded against it.
+async function seasonsForLeague(league) {
+  const firstSeason = seasonForDate(league.createdAt);
+  const seasons = new Set([CURRENT_SEASON]);
+
+  for (const s of await Score.distinct("season")) {
+    if (s >= firstSeason && s <= CURRENT_SEASON) seasons.add(s);
+  }
+
+  return [...seasons].sort((a, b) => b - a);
+}
 
 // POST /api/leagues - Create a league
 router.post("/", async (req, res) => {
@@ -138,11 +154,47 @@ router.get("/:id/leaderboard", async (req, res) => {
     const season = req.query.season
       ? parseInt(req.query.season)
       : CURRENT_SEASON;
+
+    // Don't serve a season from before this league existed — those points were
+    // scored somewhere else and would be a meaningless "history" here.
+    const allowed = await seasonsForLeague(league);
+    if (!allowed.includes(season)) {
+      return res.status(400).json({
+        message: "This league didn't run in that season",
+      });
+    }
+
     const memberIds = league.members.map((m) => m.userId);
 
     res.json(await leaderboard(season, { _id: { $in: memberIds } }));
   } catch (err) {
     console.error("League leaderboard error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// GET /api/leagues/:id/seasons - Which seasons this league has actually run in.
+// The current season is always offered; a past season only appears if the
+// league already existed then AND there are scores recorded for it.
+router.get("/:id/seasons", async (req, res) => {
+  try {
+    const league = await getLeagueIfMember(req.params.id, req.user.id);
+    if (!league) {
+      return res
+        .status(403)
+        .json({ message: "You are not a member of this league" });
+    }
+
+    const seasons = await seasonsForLeague(league);
+    res.json(
+      seasons.map((s) => ({
+        season: s,
+        label: seasonLabel(s),
+        current: s === CURRENT_SEASON,
+      }))
+    );
+  } catch (err) {
+    console.error("League seasons error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

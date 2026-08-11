@@ -24,9 +24,11 @@ function LeagueDetail() {
     }
     if (!user) return;
 
+    // Seasons come from the league itself, so a league created this summer
+    // doesn't offer last season's table as "history".
     Promise.all([
       api.get(`/api/leagues/${id}`),
-      api.get("/api/scores/seasons"),
+      api.get(`/api/leagues/${id}/seasons`),
     ])
       .then(([leagueRes, seasonsRes]) => {
         setLeague(leagueRes.data);

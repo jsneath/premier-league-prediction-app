@@ -3,7 +3,7 @@ const router = express.Router();
 const Score = require("../models/Score");
 const verifyToken = require("../middleware/verifyToken");
 const { updateAllScores } = require("../utils/scoring");
-const { CURRENT_SEASON, seasonLabel } = require("../utils/season");
+const { CURRENT_SEASON } = require("../utils/season");
 
 // All score routes require a logged-in user
 router.use(verifyToken);
@@ -23,23 +23,9 @@ router.post("/update", async (req, res) => {
   }
 });
 
-// GET /api/scores/seasons - Seasons available for the leaderboard (current + history)
-router.get("/seasons", async (req, res) => {
-  try {
-    const pastSeasons = await Score.distinct("season");
-    const seasons = [...new Set([CURRENT_SEASON, ...pastSeasons])]
-      .sort((a, b) => b - a)
-      .map((s) => ({
-        season: s,
-        label: seasonLabel(s),
-        current: s === CURRENT_SEASON,
-      }));
-    res.json(seasons);
-  } catch (err) {
-    console.error("Seasons error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
+// NOTE: the season list also lives on the league, not here. A global list was
+// showing every league the same history, including leagues created long after
+// those scores were earned. Use GET /api/leagues/:id/seasons instead.
 
 // GET /api/scores/:matchweek - User's own score for a matchweek
 router.get("/:matchweek", async (req, res) => {
