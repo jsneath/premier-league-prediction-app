@@ -2,42 +2,56 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚽</text></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0b0d1a" />
+    <meta name="theme-color" content="#070B14" />
+
+    <title>PL Predictions</title>
     <meta
       name="description"
-      content="PL Predictions — predict Premier League scores and battle your mates all season."
+      content="Predict Premier League scores, bank the points and settle it with your mates over 38 gameweeks."
     />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
+    <!-- Crest icons (replaces the default Create React App artwork) -->
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/apple-touch-icon.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+
+    <!--
+      Link previews (WhatsApp, iMessage, Slack, Facebook, X). These scrapers do
+      not run JavaScript and will not resolve relative paths, so og:image and
+      og:url must be absolute.
     -->
-    <title>PL Predictions</title>
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PL Predictions" />
+    <meta property="og:title" content="PL Predictions" />
+    <meta
+      property="og:description"
+      content="Call the scores. Beat your mates. Premier League score predictions, 38 gameweeks, one winner."
+    />
+    <meta property="og:url" content="https://premier-league-prediction-app.vercel.app/" />
+    <meta
+      property="og:image"
+      content="https://premier-league-prediction-app.vercel.app/og-image.png"
+    />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="PL Predictions crest" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="PL Predictions" />
+    <meta
+      name="twitter:description"
+      content="Call the scores. Beat your mates. Premier League score predictions, 38 gameweeks, one winner."
+    />
+    <meta
+      name="twitter:image"
+      content="https://premier-league-prediction-app.vercel.app/og-image.png"
+    />
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
   </body>
 </html>
