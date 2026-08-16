@@ -1,4 +1,4 @@
-const Anthropic = require("@anthropic-ai/sdk");
+const OpenAI = require("openai");
 const Fixture = require("../models/Fixture");
 const Prediction = require("../models/Prediction");
 const League = require("../models/League");
@@ -6,7 +6,15 @@ const Commentary = require("../models/Commentary");
 const { calculatePoints, leaderboard } = require("./scoring");
 const { CURRENT_SEASON, seasonLabel } = require("./season");
 
-// Build the data pack Claude needs to write one league's weekly report.
+function grokClient() {
+  return new OpenAI({
+    apiKey: process.env.XAI_API_KEY,
+    baseURL: "https://api.x.ai/v1",
+    timeout: 120000,
+  });
+}
+
+// Build the data pack Grok needs to write one league's weekly report.
 async function buildWeekSummary(season, matchweek, memberIds) {
   const fixtures = await Fixture.find({
     matchweek,
@@ -64,7 +72,7 @@ async function buildWeekSummary(season, matchweek, memberIds) {
 // Generate and store one league's pundit report for a finished gameweek.
 // Returns the Commentary doc, or null if not ready / not eligible.
 async function generateCommentary(league, matchweek, season = CURRENT_SEASON) {
-  if (!process.env.ANTHROPIC_API_KEY) return null;
+  if (!process.env.XAI_API_KEY) return null;
 
   const existing = await Commentary.findOne({
     leagueId: league._id,
@@ -99,30 +107,29 @@ async function generateCommentary(league, matchweek, season = CURRENT_SEASON) {
     ),
   ].join("\n");
 
-  const client = new Anthropic();
-  const response = await client.messages.create({
-    model: "claude-opus-4-8",
-    max_tokens: 2000,
-    thinking: { type: "adaptive" },
-    system:
-      "You are the resident pundit for a private Premier League score-prediction game played between a small group of friends. " +
-      "Each week you write a short, funny match report about THEIR predictions (not the football itself, though you can reference real results). " +
-      "Style: British football banter — cheeky, warm, taking the mick out of mates. Think Soccer Saturday meets a group chat. " +
-      "Praise the week's winner, roast whoever flopped (especially bold double-points picks that backfired or someone predicting a team they clearly overrate), " +
-      "celebrate exact-score hits as moments of genius, and note anything spicy in the season standings (gaps closing, leads extending, someone rooted to the bottom). " +
-      "Keep it good-natured — these are friends. No profanity stronger than mild British slang. " +
-      "Write 150-250 words of flowing prose in 2-4 short paragraphs. No headings, no bullet points, no markdown, no sign-off. " +
-      "Only ever mention the players listed in the data. Refer to them by their username exactly as given.",
-    messages: [{ role: "user", content: dataBlock }],
+  const client = grokClient();
+  const response = await client.responses.create({
+    model: "grok-4.6",
+    store: false,
+    max_output_tokens: 2000,
+    input: [
+      {
+        role: "system",
+        content:
+          "You are the resident pundit for a private Premier League score-prediction game played between a small group of friends. " +
+          "Each week you write a short, funny match report about THEIR predictions (not the football itself, though you can reference real results). " +
+          "Style: British football banter — cheeky, warm, taking the mick out of mates. Think Soccer Saturday meets a group chat. " +
+          "Praise the week's winner, roast whoever flopped (especially bold double-points picks that backfired or someone predicting a team they clearly overrate), " +
+          "celebrate exact-score hits as moments of genius, and note anything spicy in the season standings (gaps closing, leads extending, someone rooted to the bottom). " +
+          "Keep it good-natured — these are friends. No profanity stronger than mild British slang. " +
+          "Write 150-250 words of flowing prose in 2-4 short paragraphs. No headings, no bullet points, no markdown, no sign-off. " +
+          "Only ever mention the players listed in the data. Refer to them by their username exactly as given.",
+      },
+      { role: "user", content: dataBlock },
+    ],
   });
 
-  if (response.stop_reason === "refusal") return null;
-
-  const text = response.content
-    .filter((b) => b.type === "text")
-    .map((b) => b.text)
-    .join("")
-    .trim();
+  const text = (response.output_text || "").trim();
   if (!text) return null;
 
   const doc = await Commentary.findOneAndUpdate(
@@ -139,7 +146,7 @@ async function generateCommentary(league, matchweek, season = CURRENT_SEASON) {
 // Called by the hourly cron: for every league, find current-season gameweeks
 // that have fully finished with predictions in but no report yet.
 async function generateMissingCommentaries() {
-  if (!process.env.ANTHROPIC_API_KEY) return;
+  if (!process.env.XAI_API_KEY) return;
 
   try {
     const finishedWeeks = await Fixture.distinct("matchweek", {
@@ -158,7 +165,14 @@ async function generateMissingCommentaries() {
           matchweek,
         });
         if (covered) continue;
-        await generateCommentary(league, matchweek);
+        try {
+          await generateCommentary(league, matchweek);
+        } catch (err) {
+          console.error(
+            `Pundit report failed for "${league.name}" GW${matchweek}:`,
+            err.message || err
+          );
+        }
       }
     }
   } catch (err) {
