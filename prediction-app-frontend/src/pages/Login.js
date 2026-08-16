@@ -45,6 +45,7 @@ function Login() {
         <span className="auth-logo-title">
           PL <span className="brand-accent">Predictions</span>
         </span>
+        <p className="auth-turnstile">Take your seat. The teams are in the tunnel.</p>
       </div>
 
       <div className="card">
@@ -83,7 +84,7 @@ function Login() {
                   onChange={(e) => setPassword(e.target.value)} required />
               </div>
               <button type="submit" className="btn btn-primary w-100 btn-lg" disabled={loading}>
-                {loading ? <><span className="spinner-border spinner-border-sm me-2"></span>Logging in…</> : "Login"}
+                {loading ? <><span className="spinner-border spinner-border-sm me-2"></span>Through the turnstile…</> : "Take your seat"}
               </button>
               <div className="text-center mt-3">
                 <Link to="/forgot-password" style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>

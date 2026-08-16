@@ -1,7 +1,9 @@
-// The club crest: an angular shield split lime/blue with a ball at its centre.
-// Kept as inline SVG so it stays sharp at any size and can be tinted by CSS.
+import { useId } from "react";
+
+// Ember-split shield with a football. Unique ids so multiple crests on one
+// page don't clash. Kept as inline SVG so it stays sharp at any size.
 function Crest({ size = 34, className = "", animated = false }) {
-  const uid = "crest";
+  const uid = useId().replace(/:/g, "");
   return (
     <svg
       className={`crest ${animated ? "crest-animated" : ""} ${className}`}
@@ -13,51 +15,56 @@ function Crest({ size = 34, className = "", animated = false }) {
       aria-label="PL Predictions crest"
     >
       <defs>
-        <linearGradient id={`${uid}-lime`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#DDFF7A" />
-          <stop offset="100%" stopColor="#A8D82B" />
+        <linearGradient id={`${uid}-ember`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#FF8A4A" />
+          <stop offset="55%" stopColor="#FF4B1F" />
+          <stop offset="100%" stopColor="#B81F08" />
         </linearGradient>
-        <linearGradient id={`${uid}-blue`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#3FB0FF" />
-          <stop offset="100%" stopColor="#0A66C2" />
+        <linearGradient id={`${uid}-void`} x1="0.2" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#1A1C22" />
+          <stop offset="100%" stopColor="#05060A" />
         </linearGradient>
         <clipPath id={`${uid}-clip`}>
-          <path d="M3 3 H45 V31.5 L24 53 L3 31.5 Z" />
+          <path d="M4 2.5 H44 V30.5 L24 53.5 L4 30.5 Z" />
         </clipPath>
       </defs>
 
-      {/* Shield body, split diagonally */}
       <g clipPath={`url(#${uid}-clip)`}>
-        <rect x="0" y="0" width="48" height="56" fill={`url(#${uid}-blue)`} />
-        <path d="M0 0 H48 L0 56 Z" fill={`url(#${uid}-lime)`} />
-        {/* floodlight sheen that sweeps across on hover / load */}
-        <rect className="crest-sheen" x="-30" y="-10" width="18" height="76" fill="#fff" opacity="0.35" />
-      </g>
-
-      {/* Ball */}
-      <g transform="translate(24 25)">
-        <circle r="9.5" fill="#08111C" />
-        <circle r="9.5" fill="none" stroke="#fff" strokeWidth="1.4" opacity="0.9" />
-        <path
-          d="M0 -5.4 L5.1 -1.7 L3.2 4.4 L-3.2 4.4 L-5.1 -1.7 Z"
+        <rect x="0" y="0" width="48" height="56" fill={`url(#${uid}-void)`} />
+        <path d="M-4 -4 H52 L-4 60 Z" fill={`url(#${uid}-ember)`} />
+        <rect
+          className="crest-sheen"
+          x="-28"
+          y="-12"
+          width="16"
+          height="80"
           fill="#fff"
-        />
-        <path
-          d="M0 -9.5 V-5.4 M5.1 -1.7 L9 -3.6 M3.2 4.4 L5.8 7.9 M-3.2 4.4 L-5.8 7.9 M-5.1 -1.7 L-9 -3.6"
-          stroke="#fff"
-          strokeWidth="1.3"
-          strokeLinecap="round"
-          opacity="0.9"
+          opacity="0.28"
         />
       </g>
 
-      {/* Shield outline */}
+      <g transform="translate(24 26)">
+        <circle r="9.2" fill="#07080C" />
+        <circle r="9.2" fill="none" stroke="#F4EFE6" strokeWidth="1.35" />
+        <path
+          d="M0 -5.1 L4.8 -1.6 L3 4.2 L-3 4.2 L-4.8 -1.6 Z"
+          fill="#F4EFE6"
+        />
+        <path
+          d="M0 -9.2 V-5.1 M4.8 -1.6 L8.6 -3.4 M3 4.2 L5.5 7.6 M-3 4.2 L-5.5 7.6 M-4.8 -1.6 L-8.6 -3.4"
+          stroke="#F4EFE6"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+        />
+      </g>
+
       <path
-        d="M3 3 H45 V31.5 L24 53 L3 31.5 Z"
+        d="M4 2.5 H44 V30.5 L24 53.5 L4 30.5 Z"
         fill="none"
-        stroke="#08111C"
-        strokeWidth="2.5"
+        stroke="#F4EFE6"
+        strokeWidth="1.6"
         strokeLinejoin="round"
+        opacity="0.9"
       />
     </svg>
   );

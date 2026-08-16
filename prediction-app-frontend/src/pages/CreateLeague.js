@@ -34,16 +34,16 @@ function CreateLeague() {
         <div className="col-md-6 col-lg-5">
           <div className="card shadow">
             <div className="card-body p-4 text-center">
-              <h3 className="mb-3">League Created!</h3>
+              <h3 className="mb-3">Season tickets printed.</h3>
               <p className="text-muted">
-                Share this invite code with your friends:
+                Hand this stub to your mates. It is the only way in.
               </p>
+              <div className="season-ticket">
+                <span className="season-ticket-club">{createdLeague.name}</span>
+                <span className="season-ticket-code">{createdLeague.inviteCode}</span>
+                <span className="season-ticket-row">STAND · MATES · NO AWAY FANS</span>
+              </div>
               <div className="d-flex justify-content-center align-items-center gap-2 mb-3">
-                <span
-                  className="fs-2 fw-bold font-monospace bg-light px-3 py-2 rounded"
-                >
-                  {createdLeague.inviteCode}
-                </span>
                 <button
                   className="btn btn-outline-secondary btn-sm"
                   onClick={copyCode}

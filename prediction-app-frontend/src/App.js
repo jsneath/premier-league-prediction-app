@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
@@ -13,13 +13,19 @@ import CreateLeague from "./pages/CreateLeague";
 import JoinLeague from "./pages/JoinLeague";
 import LeagueDetail from "./pages/LeagueDetail";
 import GameweekReview from "./pages/GameweekReview";
+import EmberField from "./components/EmberField";
+import BroadcastRibbon from "./components/BroadcastRibbon";
+import NotFound from "./pages/NotFound";
 
 function App() {
+  const location = useLocation();
   return (
     <AuthProvider>
       <div>
+        <EmberField />
         <Navbar />
-        <div className="container mt-4">
+        <BroadcastRibbon />
+        <div className="container mt-4 page-enter" key={location.pathname}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/fixtures" element={<Fixtures />} />
@@ -37,7 +43,7 @@ function App() {
             <Route path="/leaderboard" element={<Navigate to="/leagues" replace />} />
             <Route path="/gameweek/:matchweek" element={<GameweekReview />} />
             <Route path="/gameweek" element={<GameweekReview />} />
-            <Route path="*" element={<div>404 Not Found</div>} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import PredictionForm from "../components/PredictionForm";
+import SeasonTrack from "../components/SeasonTrack";
 import api from "../api/axios";
 
 function Predictions() {
@@ -74,7 +75,9 @@ function Predictions() {
 
   return (
     <div>
-      <h1 className="mb-4">Predict Matchweek {matchweek}</h1>
+      <h1 className="page-title mb-2">Predict GW{matchweek}</h1>
+      <p className="text-muted mb-3">Write the scores on the ticket. One match wears the armband.</p>
+      <SeasonTrack currentWeek={matchweek} />
       <PredictionForm fixtures={fixtures} matchweek={matchweek} />
     </div>
   );

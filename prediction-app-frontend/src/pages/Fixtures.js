@@ -2,34 +2,31 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import api from "../api/axios";
+import FlipScore from "../components/FlipScore";
 
 function FixtureRow({ f }) {
   const ft = ["FT","AET","PEN"].includes(f.status?.short);
   const live = ["1H","HT","2H","ET","BT","P","LIVE"].includes(f.status?.short);
   return (
-    <div style={{
-      display: "grid",
-      gridTemplateColumns: "1fr 90px 1fr",
-      alignItems: "center",
-      padding: "0.9rem 1.25rem",
-      borderBottom: "1px solid var(--border)",
-      gap: "0.5rem",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.5rem" }}>
-        <span style={{ fontWeight: 600, fontSize: "0.9rem", textAlign: "right" }}>{f.teams.home.name}</span>
-        <img src={f.teams.home.logo} alt="" width="28" height="28" style={{ objectFit: "contain", flexShrink: 0 }} />
+    <div className="fx-row">
+      <div className="fx-team home">
+        <span>{f.teams.home.name}</span>
+        <img src={f.teams.home.logo} alt="" width="28" height="28" />
       </div>
-      <div style={{ textAlign: "center" }}>
+      <div className="fx-center">
         {ft ? (
-          <span style={{ fontFamily: "Oswald, sans-serif", fontSize: "1.15rem", fontWeight: 700, color: "var(--text)" }}>
-            {f.goals.home} <span style={{ color: "var(--text-muted)" }}>–</span> {f.goals.away}
-          </span>
+          <div className="fx-score">
+            <FlipScore value={f.goals.home} /><span>–</span><FlipScore value={f.goals.away} />
+          </div>
         ) : live ? (
-          <span className="status-live">{f.goals.home ?? 0}–{f.goals.away ?? 0}</span>
+          <div className="fx-live">
+            <span className="fx-live-dot" />
+            {f.goals.home ?? 0}–{f.goals.away ?? 0}
+          </div>
         ) : (
           <>
-            <div style={{ fontFamily: "Oswald, sans-serif", fontSize: "1rem", color: "var(--text-muted)" }}>vs</div>
-            <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "2px" }}>
+            <div className="fx-vs">VS</div>
+            <div className="fx-when">
               {new Date(f.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
               {" "}
               {new Date(f.date).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
@@ -37,9 +34,9 @@ function FixtureRow({ f }) {
           </>
         )}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-        <img src={f.teams.away.logo} alt="" width="28" height="28" style={{ objectFit: "contain", flexShrink: 0 }} />
-        <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>{f.teams.away.name}</span>
+      <div className="fx-team">
+        <img src={f.teams.away.logo} alt="" width="28" height="28" />
+        <span>{f.teams.away.name}</span>
       </div>
     </div>
   );

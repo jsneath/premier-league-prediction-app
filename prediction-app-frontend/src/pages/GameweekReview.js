@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import LeaguePicker from "../components/LeaguePicker";
 import { useMyLeagues } from "../hooks/useMyLeagues";
 import api from "../api/axios";
+import Typewriter from "../components/Typewriter";
 
 function GameweekReview() {
   const { matchweek: matchweekParam } = useParams();
@@ -150,11 +151,12 @@ function GameweekReview() {
               <div className="pundit-header">
                 <span className="pundit-icon">🎙️</span>
                 <span>The Pundit — GW{selectedWeek} Report</span>
+                <span className="vu-meters" aria-hidden>
+                  <i /><i /><i /><i /><i />
+                </span>
               </div>
               <div className="pundit-body">
-                {commentary.text.split("\n").filter(Boolean).map((para, i) => (
-                  <p key={i}>{para}</p>
-                ))}
+                <Typewriter text={commentary.text} />
               </div>
             </div>
           )}
@@ -162,7 +164,12 @@ function GameweekReview() {
           {/* Weekly summary table */}
           {sortedUsers.length > 0 && lockedSet.size > 0 && (
             <div className="card mb-4">
-              <div className="card-header fw-bold">GW{selectedWeek} Points</div>
+              <div className="card-header fw-bold">
+                GW{selectedWeek} Points
+                {sortedUsers[0] && (
+                  <span className="motm-chip">Player of the week · {sortedUsers[0].username}</span>
+                )}
+              </div>
               <div className="table-responsive">
                 <table className="table table-sm mb-0">
                   <thead className="table-dark">
@@ -176,11 +183,11 @@ function GameweekReview() {
                     {sortedUsers.map((u, i) => (
                       <tr
                         key={u.userId}
-                        className=""
+                        className={i < 3 ? `podium-${i + 1}` : ""}
                       >
-                        <td>{i + 1}</td>
+                        <td><span className={`rank-badge ${i < 3 ? `rank-${i + 1}` : "rank-other"}`}>{i + 1}</span></td>
                         <td>{u.username}</td>
-                        <td>{u.weeklyTotal}</td>
+                        <td className="points-value">{u.weeklyTotal}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -296,8 +303,8 @@ function GameweekReview() {
 function PointsBadge({ points }) {
   if (points === null) return <span className="text-muted">—</span>;
   if (points === 0) return <span className="text-danger">0</span>;
-  if (points >= 6) return <span className="badge bg-warning text-dark">{points}</span>;
-  if (points >= 3) return <span className="badge bg-success">{points}</span>;
+  if (points >= 6) return <span className="badge bg-warning text-dark hit-screamer">{points} screamer</span>;
+  if (points >= 3) return <span className="badge bg-success hit-exact">{points} exact</span>;
   return <span className="badge bg-secondary">{points}</span>;
 }
 

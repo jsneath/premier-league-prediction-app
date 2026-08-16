@@ -4,6 +4,10 @@ import { useState, useEffect } from "react";
 import Leaderboard from "../components/Leaderboard";
 import LeaguePicker from "../components/LeaguePicker";
 import Reveal from "../components/Reveal";
+import Crest from "../components/Crest";
+import KickoffTicker from "../components/KickoffTicker";
+import Jumbotron from "../components/Jumbotron";
+import SeasonTrack from "../components/SeasonTrack";
 import { useMyLeagues } from "../hooks/useMyLeagues";
 import api from "../api/axios";
 
@@ -36,19 +40,26 @@ function Home() {
   return (
     <div>
       {/* Hero */}
-      <div className="hero-section">
+      <div
+        className="hero-section"
+        onMouseMove={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          e.currentTarget.style.setProperty("--spot-x", `${e.clientX - r.left}px`);
+          e.currentTarget.style.setProperty("--spot-y", `${e.clientY - r.top}px`);
+        }}
+      >
         <div className="row align-items-center">
-          <div className="col-lg-7">
+          <div className="col-lg-8">
             {seasonLabel && (
               <span className="season-chip season-chip-hero">Season {seasonLabel}</span>
             )}
             <h1 className="hero-title">
-              Premier League<br />
-              <span className="accent">Predictions</span>
+              Call the scores.<br />
+              <span className="accent">Settle it later.</span>
             </h1>
             <p className="hero-subtitle">
-              Call the scores, bank the points, and settle it with your mates
-              over thirty-eight gameweeks.
+              Thirty-eight gameweeks. One table. Your mates, your picks,
+              and a pundit who will not let a wild double-points miss go quietly.
             </p>
             <div className="d-flex gap-2 flex-wrap">
               {currentWeek && (
@@ -68,8 +79,17 @@ function Home() {
               )}
             </div>
           </div>
+          <div className="col-lg-4 d-none d-lg-flex justify-content-end">
+            <div className="hero-crest">
+              <Crest size={148} animated />
+            </div>
+          </div>
         </div>
+        <KickoffTicker />
       </div>
+
+      <SeasonTrack currentWeek={currentWeek} seasonLabel={seasonLabel} />
+      <Jumbotron />
 
       {/* Scoring rules + leaderboard */}
       <div className="row g-3">

@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
 import api from "../api/axios";
+import TiltCard from "./TiltCard";
+import LockCountdown from "./LockCountdown";
+import SaveBurst from "./SaveBurst";
+import PitchLean from "./PitchLean";
 
 
 const PredictionForm = ({ fixtures, matchweek }) => {
@@ -9,6 +13,7 @@ const PredictionForm = ({ fixtures, matchweek }) => {
   const [messageType, setMessageType] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
+  const [burst, setBurst] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -38,6 +43,40 @@ const PredictionForm = ({ fixtures, matchweek }) => {
       })));
     });
   }, [fixtures, matchweek]);
+
+  const nudgeScore = (idx, field, delta) => {
+    if (isLocked(fixtures[idx]._id)) return;
+    setPredictions((prev) => {
+      if (!prev[idx]) return prev;
+      const current = prev[idx][field];
+      const base = current === "" || current === null ? 0 : Number(current);
+      const next = Math.max(0, Math.min(20, base + delta));
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], [field]: next };
+      return updated;
+    });
+  };
+
+  const leanFor = (p) => {
+    if (!isFilled(p)) return null;
+    const h = Number(p.predictedHomeScore);
+    const a = Number(p.predictedAwayScore);
+    if (h > a) return "home";
+    if (a > h) return "away";
+    return "draw";
+  };
+
+  const banterFor = (p) => {
+    if (!isFilled(p)) return null;
+    const h = Number(p.predictedHomeScore);
+    const a = Number(p.predictedAwayScore);
+    if (h === 0 && a === 0) return "Parking the bus.";
+    if (h + a >= 7) return "A cricket score. Someone fetch a new net.";
+    if (h >= 3 && a >= 3) return "End-to-end stuff. Midfield has left the building.";
+    if ((h === 1 && a === 0) || (h === 0 && a === 1)) return "A smash and grab.";
+    if (h === a && h >= 2) return "A thriller that forgets to pick a winner.";
+    return null;
+  };
 
   const isLocked = (fixtureId) => {
     const dl = deadlines.find((d) => d.fixtureId === fixtureId);
@@ -91,6 +130,7 @@ const PredictionForm = ({ fixtures, matchweek }) => {
       setMessage(res.data.message);
       setMessageType("success");
       setSavedAt(new Date());
+      setBurst((n) => n + 1);
     } catch (err) {
       setMessage(err.response?.data?.message || "Failed to submit predictions.");
       setMessageType("danger");
@@ -115,7 +155,8 @@ const PredictionForm = ({ fixtures, matchweek }) => {
   const hasDoublePick = predictions.some((p) => p?.isDoublePoints);
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="prediction-form">
+      <SaveBurst fire={burst} />
       {allLocked && (
         <div className="alert alert-info mb-3">
           All fixtures have locked — predictions can no longer be changed.
@@ -148,18 +189,20 @@ const PredictionForm = ({ fixtures, matchweek }) => {
         const locked = isLocked(f._id);
         const pred = predictions[idx];
         const kickoff = deadlines.find((d) => d.fixtureId === f._id)?.kickoff;
-        const timeUntil = kickoff ? new Date(kickoff).getTime() - Date.now() : null;
-        const minsLeft = timeUntil ? Math.max(0, Math.floor(timeUntil / 60000)) : null;
-        const soonWarning = !locked && minsLeft !== null && minsLeft < 120;
-
         const filled = isFilled(pred);
+        const lean = leanFor(pred);
+        const banter = banterFor(pred);
 
         return (
-          <div
+          <TiltCard
+            disabled={locked}
             className={`prediction-card ${locked ? "locked" : ""} ${
               !locked && !filled ? "unpredicted" : ""
+            } ${!locked && filled ? "predicted" : ""} ${
+              pred?.isDoublePoints ? "doubled" : ""
             }`}
             key={f._id}
+            style={{ animationDelay: `${idx * 45}ms` }}
           >
             <div className="prediction-card-header">
               <span>
@@ -174,12 +217,13 @@ const PredictionForm = ({ fixtures, matchweek }) => {
                     ? <span className="predict-tag predict-tag-done">✓ Predicted</span>
                     : <span className="predict-tag predict-tag-todo">Not yet</span>
                 )}
-                {locked
-                  ? <span className="badge bg-secondary">🔒 Locked</span>
-                  : soonWarning
-                  ? <span className="badge bg-warning text-dark">⚠️ Locks in {minsLeft}m</span>
-                  : <span style={{ color: "var(--green)", fontSize: "0.75rem", fontWeight: 600 }}>Open</span>
-                }
+                {locked ? (
+                  <span className="badge bg-secondary">Locked</span>
+                ) : kickoff ? (
+                  <LockCountdown kickoff={kickoff} locked={locked} />
+                ) : (
+                  <span style={{ color: "var(--green)", fontSize: "0.75rem", fontWeight: 600 }}>Open</span>
+                )}
               </span>
             </div>
 
@@ -191,25 +235,33 @@ const PredictionForm = ({ fixtures, matchweek }) => {
                 </div>
 
                 <div className="score-inputs">
-                  <input
-                    type="number"
-                    className="form-control score-input"
-                    min="0"
-                    value={pred?.predictedHomeScore ?? ""}
-                    onChange={(e) => handleScoreChange(idx, "predictedHomeScore", e.target.value)}
-                    disabled={locked}
-                    placeholder="0"
-                  />
+                  <div className="score-stepper">
+                    <button type="button" className="step-btn" disabled={locked} onClick={() => nudgeScore(idx, "predictedHomeScore", 1)} aria-label="Home score up">+</button>
+                    <input
+                      type="number"
+                      className="form-control score-input"
+                      min="0"
+                      value={pred?.predictedHomeScore ?? ""}
+                      onChange={(e) => handleScoreChange(idx, "predictedHomeScore", e.target.value)}
+                      disabled={locked}
+                      placeholder="0"
+                    />
+                    <button type="button" className="step-btn" disabled={locked} onClick={() => nudgeScore(idx, "predictedHomeScore", -1)} aria-label="Home score down">−</button>
+                  </div>
                   <span className="score-divider">–</span>
-                  <input
-                    type="number"
-                    className="form-control score-input"
-                    min="0"
-                    value={pred?.predictedAwayScore ?? ""}
-                    onChange={(e) => handleScoreChange(idx, "predictedAwayScore", e.target.value)}
-                    disabled={locked}
-                    placeholder="0"
-                  />
+                  <div className="score-stepper">
+                    <button type="button" className="step-btn" disabled={locked} onClick={() => nudgeScore(idx, "predictedAwayScore", 1)} aria-label="Away score up">+</button>
+                    <input
+                      type="number"
+                      className="form-control score-input"
+                      min="0"
+                      value={pred?.predictedAwayScore ?? ""}
+                      onChange={(e) => handleScoreChange(idx, "predictedAwayScore", e.target.value)}
+                      disabled={locked}
+                      placeholder="0"
+                    />
+                    <button type="button" className="step-btn" disabled={locked} onClick={() => nudgeScore(idx, "predictedAwayScore", -1)} aria-label="Away score down">−</button>
+                  </div>
                 </div>
 
                 <div className="prediction-team">
@@ -217,6 +269,20 @@ const PredictionForm = ({ fixtures, matchweek }) => {
                   <span>{f.teams.away.name}</span>
                 </div>
               </div>
+
+              {lean && <PitchLean lean={lean} />}
+
+              {lean && (
+                <div className={`result-lean result-lean-${lean}`}>
+                  {lean === "home" && `${f.teams.home.name} win`}
+                  {lean === "away" && `${f.teams.away.name} win`}
+                  {lean === "draw" && "Draw"}
+                </div>
+              )}
+              {banter && <p className="score-banter">{banter}</p>}
+              {pred?.isDoublePoints && (
+                <div className="captain-band">Armband on. This one counts twice.</div>
+              )}
 
               <label className={`double-points-toggle w-100 ${pred?.isDoublePoints ? "active" : ""}`}>
                 <input
@@ -241,7 +307,7 @@ const PredictionForm = ({ fixtures, matchweek }) => {
                 </span>
               </label>
             </div>
-          </div>
+          </TiltCard>
         );
       })}
 
@@ -257,7 +323,7 @@ const PredictionForm = ({ fixtures, matchweek }) => {
       )}
 
       {!allLocked && (
-        <>
+        <div className="save-bar">
           <button
             type="submit"
             className="btn btn-primary w-100 btn-lg"
@@ -277,7 +343,7 @@ const PredictionForm = ({ fixtures, matchweek }) => {
             You can come back and predict the rest later — each match stays open
             until an hour before it kicks off.
           </p>
-        </>
+        </div>
       )}
     </form>
   );

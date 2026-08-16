@@ -14,7 +14,7 @@ function Navbar() {
     <nav className="navbar navbar-expand-lg">
       <div className="container">
         <Link className="navbar-brand" to="/" onClick={close}>
-          <Crest size={30} />
+          <Crest size={32} />
           <span className="brand-text">
             PL <span className="brand-accent">Predictions</span>
           </span>

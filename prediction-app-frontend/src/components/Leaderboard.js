@@ -6,7 +6,7 @@ function RankBadge({ rank }) {
 }
 
 // Consistent colour per player, derived from their name
-const AVATAR_HUES = [78, 205, 340, 150, 25, 262];
+const AVATAR_HUES = [14, 188, 38, 205, 340, 25];
 function Avatar({ name }) {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
