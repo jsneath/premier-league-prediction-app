@@ -146,6 +146,14 @@ async function call(method, path, { token, body } = {}) {
   r = await call("POST", "/login", { body: { username: "sneath_new", password: NEW_PW } });
   check("can log in with the new password", r.status, 200);
 
+  r = await call("POST", "/login", { body: { username: "SNEATH_NEW", password: NEW_PW } });
+  check("login is case-insensitive", r.status, 200);
+
+  r = await call("POST", "/register", {
+    body: { username: "Sneath_New", email: "clash@example.com", password: "anotherPass1" },
+  });
+  check("cannot register the same name in a different case", r.status, 400);
+
   r = await call("POST", "/login", { body: { username: "sneath_new", password: OLD_PW } });
   check("old password no longer works", r.status, 401);
 

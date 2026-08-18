@@ -7,6 +7,7 @@ const rateLimit = require("express-rate-limit");
 const User = require("../models/User");
 const sendEmail = require("../utils/sendEmail");
 const verifyToken = require("./verifyToken");
+const { usernameFilter, sameUsername } = require("../utils/username");
 const router = express.Router();
 
 // Rate limiter for login
@@ -73,13 +74,13 @@ router.post(
     }
     const { username, password, email } = req.body;
     try {
-      let user = await User.findOne({ $or: [{ username }, { email }] });
-      if (user) {
-        if (user.username === username) {
-          return res.status(400).json({ msg: "Username already exists" });
-        } else {
-          return res.status(400).json({ msg: "Email already in use" });
-        }
+      const existingName = await User.findOne(usernameFilter(username));
+      if (existingName) {
+        return res.status(400).json({ msg: "Username already exists" });
+      }
+      const existingEmail = await User.findOne({ email });
+      if (existingEmail) {
+        return res.status(400).json({ msg: "Email already in use" });
       }
       user = new User({
         username,
@@ -109,7 +110,7 @@ router.post("/login", loginLimiter, async (req, res) => {
     if (!username || !password) {
       return res.status(400).json({ message: "Username and password are required" });
     }
-    const user = await User.findOne({ username });
+    const user = await User.findOne(usernameFilter(username));
     if (!user || !(await user.comparePassword(password))) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
@@ -188,9 +189,13 @@ router.patch(
 
       const { username, email } = req.body;
 
-      // Only complain about clashes with *other* people's accounts
-      if (username !== user.username) {
-        const taken = await User.findOne({ username, _id: { $ne: user._id } });
+      // Only complain about clashes with *other* people's accounts.
+      // Changing only the capital letters of your own name is allowed.
+      if (!sameUsername(username, user.username)) {
+        const taken = await User.findOne({
+          ...usernameFilter(username),
+          _id: { $ne: user._id },
+        });
         if (taken) return res.status(400).json({ message: "That username is already taken" });
       }
       if (email !== user.email) {
@@ -281,7 +286,13 @@ router.post(
     }
 
     try {
-      const user = await User.findOne({ email: req.body.email });
+      const email = req.body.email;
+      const user = await User.findOne({
+        $or: [
+          { email },
+          { email: new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
+        ],
+      });
 
       if (user) {
         const resetToken = crypto.randomBytes(32).toString("hex");
@@ -293,7 +304,7 @@ router.post(
         await user.save();
 
         const resetUrl = `${
-          process.env.FRONTEND_URL || "http://localhost:3000"
+          (process.env.FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "")
         }/reset-password/${resetToken}`;
 
         await sendEmail({
@@ -316,7 +327,10 @@ router.post(
       });
     } catch (err) {
       console.error("Forgot password error:", err);
-      res.status(500).json({ message: "Server error" });
+      res.status(503).json({
+        message:
+          "The reset email could not be sent just now. Try again in a minute, or ask James to reset it for you.",
+      });
     }
   }
 );
