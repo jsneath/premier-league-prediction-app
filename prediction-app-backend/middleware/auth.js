@@ -300,7 +300,7 @@ router.post(
           .createHash("sha256")
           .update(resetToken)
           .digest("hex");
-        user.resetPasswordExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+        user.resetPasswordExpires = Date.now() + 48 * 60 * 60 * 1000; // 48 hours
         await user.save();
 
         const resetUrl = `${
@@ -314,7 +314,7 @@ router.post(
             <h2>Password Reset Request</h2>
             <p>You requested a password reset. Click the link below to set a new password:</p>
             <p><a href="${resetUrl}">${resetUrl}</a></p>
-            <p>This link expires in 1 hour.</p>
+            <p>This link expires in 48 hours.</p>
             <p>If you didn't request this, please ignore this email.</p>
           `,
         });
