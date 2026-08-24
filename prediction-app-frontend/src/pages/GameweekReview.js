@@ -50,11 +50,15 @@ function GameweekReview() {
         setLoading(false);
       });
 
-    // Pundit's report — only exists once the gameweek has fully finished
     api
       .get(`/api/commentary/${selectedWeek}?leagueId=${leagueId}`)
       .then((res) => setCommentary(res.data))
-      .catch(() => {});
+      .catch(() => {
+        api
+          .post(`/api/commentary/${selectedWeek}/generate?leagueId=${leagueId}`)
+          .then((res) => setCommentary(res.data))
+          .catch(() => {});
+      });
   }, [selectedWeek, user, leagueId]);
 
   const changeWeek = (delta) => {

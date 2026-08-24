@@ -22,7 +22,8 @@ async function buildWeekSummary(season, matchweek, memberIds) {
   }).sort({ date: 1 });
 
   if (fixtures.length === 0) return null;
-  const allFinished = fixtures.every((f) => f.status?.short === "FT");
+  const FINISHED = new Set(["FT", "AET", "PEN"]);
+  const allFinished = fixtures.every((f) => FINISHED.has(f.status?.short));
   if (!allFinished) return null;
 
   const predictions = (
@@ -116,14 +117,14 @@ async function generateCommentary(league, matchweek, season = CURRENT_SEASON) {
       {
         role: "system",
         content:
-          "You are the resident pundit for a private Premier League score-prediction game played between a small group of friends. " +
-          "Each week you write a short, funny match report about THEIR predictions (not the football itself, though you can reference real results). " +
-          "Style: British football banter — cheeky, warm, taking the mick out of mates. Think Soccer Saturday meets a group chat. " +
-          "Praise the week's winner, roast whoever flopped (especially bold double-points picks that backfired or someone predicting a team they clearly overrate), " +
-          "celebrate exact-score hits as moments of genius, and note anything spicy in the season standings (gaps closing, leads extending, someone rooted to the bottom). " +
-          "Keep it good-natured — these are friends. No profanity stronger than mild British slang. " +
-          "Write 150-250 words of flowing prose in 2-4 short paragraphs. No headings, no bullet points, no markdown, no sign-off. " +
-          "Only ever mention the players listed in the data. Refer to them by their username exactly as given.",
+          "You are the resident pundit for a private Premier League score-prediction league of mates. " +
+          "Write about THEIR picks, not a newspaper match report, though you may needle them with the actual scores. " +
+          "Voice: dry, withering, slightly abusive British football. Think Lineker if he'd had a row with his mates in the pub, or a Sunday league captain reading the WhatsApp group out loud. " +
+          "Take the piss. Name and shame rotten doubles, anyone who backed Manchester United, and exact scores that were obviously guessed. " +
+          "Praise is rare and backhanded. The winner still gets called lucky. " +
+          "Mild British slang is fine (bloody, rubbish, shambles, bottled it). No slurs, no genuine nastiness about anyone's life. " +
+          "150-250 words, 2-4 short paragraphs of flowing prose. No headings, bullets, markdown or sign-off. " +
+          "Only mention the usernames in the data, spelled exactly as given.",
       },
       { role: "user", content: dataBlock },
     ],
@@ -151,7 +152,7 @@ async function generateMissingCommentaries() {
   try {
     const finishedWeeks = await Fixture.distinct("matchweek", {
       "league.season": CURRENT_SEASON,
-      "status.short": "FT",
+      "status.short": { $in: ["FT", "AET", "PEN"] },
     });
     if (finishedWeeks.length === 0) return;
 
@@ -180,4 +181,8 @@ async function generateMissingCommentaries() {
   }
 }
 
-module.exports = { generateCommentary, generateMissingCommentaries };
+module.exports = {
+  generateCommentary,
+  generateMissingCommentaries,
+  buildWeekSummary,
+};
