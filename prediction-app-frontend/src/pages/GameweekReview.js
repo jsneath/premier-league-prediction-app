@@ -253,7 +253,7 @@ function GameweekReview() {
                             <th>Player</th>
                             <th className="text-center">Prediction</th>
                             <th className="text-center">×2</th>
-                            <th className="text-center">Pts</th>
+                            {isFinished && <th className="text-center">Pts</th>}
                           </tr>
                         </thead>
                         <tbody>
@@ -275,13 +275,15 @@ function GameweekReview() {
                                 <td className="text-center">
                                   {pred?.isDoublePoints ? "⚡" : ""}
                                 </td>
-                                <td className="text-center fw-bold">
-                                  {pred != null ? (
-                                    <PointsBadge points={pred.points} />
-                                  ) : (
-                                    <span className="no-show">0</span>
-                                  )}
-                                </td>
+                                {isFinished && (
+                                  <td className="text-center fw-bold">
+                                    {pred != null ? (
+                                      <PointsBadge points={pred.points} />
+                                    ) : (
+                                      <span className="no-show">0</span>
+                                    )}
+                                  </td>
+                                )}
                               </tr>
                             );
                           })}
