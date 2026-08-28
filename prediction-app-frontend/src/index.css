@@ -1577,6 +1577,12 @@ a:hover { color: var(--lime-bright); }
   margin: 0;
 }
 
+.no-show {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-style: italic;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ember-field, .kickoff-ticker-run, .save-burst, .type-caret,
   .broadcast-ribbon-run, .vu-meters, .offside-flag { display: none !important; }

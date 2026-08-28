@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Prediction = require("../models/Prediction");
 const Fixture = require("../models/Fixture");
+const User = require("../models/User");
 const auth = require("../middleware/verifyToken");
 const { calculatePoints } = require("../utils/scoring");
 const { CURRENT_SEASON } = require("../utils/season");
@@ -171,48 +172,57 @@ router.get("/matchweek/:matchweek/all", auth, async (req, res) => {
       visibleIds = await leagueMateIds(req.user.id);
     }
 
-    const allPredictions = (
-      await Prediction.find({
-        matchweek,
-        season: CURRENT_SEASON,
-        userId: { $in: visibleIds },
-      }).populate("userId", "username")
-      // Skip deleted accounts, and anyone whose record is empty — they
-      // haven't actually predicted anything.
-    ).filter((p) => p.userId?.username && p.predictions.length > 0);
+    const allPredictions = await Prediction.find({
+      matchweek,
+      season: CURRENT_SEASON,
+      userId: { $in: visibleIds },
+    }).populate("userId", "username");
 
-    const users = allPredictions.map((predDoc) => {
-      const predsMap = {};
-      for (const p of predDoc.predictions) {
-        const fid = p.fixtureId.toString();
-        if (!lockedFixtureIds.has(fid)) continue;
+    const predByUser = new Map(
+      allPredictions
+        .filter((p) => p.userId?._id)
+        .map((p) => [String(p.userId._id), p])
+    );
 
-        const fixture = fixtures.find((f) => f._id.toString() === fid);
-        const points =
-          fixture?.status?.short === "FT"
-            ? calculatePoints(p, fixture.goals.home, fixture.goals.away)
-            : null;
+    const members = await User.find({ _id: { $in: visibleIds } }).select(
+      "username"
+    );
 
-        predsMap[fid] = {
-          predictedHomeScore: p.predictedHomeScore,
-          predictedAwayScore: p.predictedAwayScore,
-          isDoublePoints: p.isDoublePoints,
-          points,
+    const users = members
+      .filter((u) => u.username)
+      .map((member) => {
+        const predDoc = predByUser.get(String(member._id));
+        const predsMap = {};
+        for (const p of predDoc?.predictions || []) {
+          const fid = p.fixtureId.toString();
+          if (!lockedFixtureIds.has(fid)) continue;
+
+          const fixture = fixtures.find((f) => f._id.toString() === fid);
+          const points =
+            fixture?.status?.short === "FT"
+              ? calculatePoints(p, fixture.goals.home, fixture.goals.away)
+              : null;
+
+          predsMap[fid] = {
+            predictedHomeScore: p.predictedHomeScore,
+            predictedAwayScore: p.predictedAwayScore,
+            isDoublePoints: p.isDoublePoints,
+            points,
+          };
+        }
+
+        const weeklyTotal = Object.values(predsMap).reduce(
+          (sum, p) => sum + (p.points ?? 0),
+          0
+        );
+
+        return {
+          userId: member._id,
+          username: member.username,
+          predictions: predsMap,
+          weeklyTotal,
         };
-      }
-
-      const weeklyTotal = Object.values(predsMap).reduce(
-        (sum, p) => sum + (p.points ?? 0),
-        0
-      );
-
-      return {
-        userId: predDoc.userId._id,
-        username: predDoc.userId.username,
-        predictions: predsMap,
-        weeklyTotal,
-      };
-    });
+      });
 
     res.json({
       fixtures,
