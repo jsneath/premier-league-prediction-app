@@ -253,7 +253,7 @@ function GameweekReview() {
                             <th>Player</th>
                             <th className="text-center">Prediction</th>
                             <th className="text-center">×2</th>
-                            {isFinished && <th className="text-center">Pts</th>}
+                            <th className="text-center">Pts</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -269,21 +269,19 @@ function GameweekReview() {
                                   {pred ? (
                                     `${pred.predictedHomeScore} – ${pred.predictedAwayScore}`
                                   ) : (
-                                    <span className="no-show">{noShowLine(u.username, fid)}</span>
+                                    <span className="no-show">didn&apos;t bother</span>
                                   )}
                                 </td>
                                 <td className="text-center">
                                   {pred?.isDoublePoints ? "⚡" : ""}
                                 </td>
-                                {isFinished && (
-                                  <td className="text-center fw-bold">
-                                    {pred != null ? (
-                                      <PointsBadge points={pred.points} />
-                                    ) : (
-                                      <span className="no-show">0</span>
-                                    )}
-                                  </td>
-                                )}
+                                <td className="text-center fw-bold">
+                                  {pred != null ? (
+                                    <PointsBadge points={pred.points} />
+                                  ) : (
+                                    <span className="no-show">0</span>
+                                  )}
+                                </td>
                               </tr>
                             );
                           })}
@@ -306,24 +304,6 @@ function GameweekReview() {
       )}
     </div>
   );
-}
-
-const NO_SHOW_LINES = [
-  "Didn't fancy it",
-  "Left it in his other trousers",
-  "On strike",
-  "Watching something else",
-  "Forgot he had a league",
-  "Mysteriously unavailable",
-  "Having a lie-down",
-  "Not in the building",
-];
-
-function noShowLine(username, fixtureId) {
-  const key = `${username}|${fixtureId}`;
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
-  return NO_SHOW_LINES[hash % NO_SHOW_LINES.length];
 }
 
 function PointsBadge({ points }) {
