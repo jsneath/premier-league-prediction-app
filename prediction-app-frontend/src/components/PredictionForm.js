@@ -5,6 +5,71 @@ import LockCountdown from "./LockCountdown";
 import SaveBurst from "./SaveBurst";
 import PitchLean from "./PitchLean";
 
+const isBlankScore = (v) => v === "" || v === null || v === undefined;
+
+// Blank is "no pick". 0 is a real 0–0 style pick. First + from blank
+// lands on 0 so nobody has to go + then − to get a nil.
+const nudgeFrom = (current, delta) => {
+  if (isBlankScore(current)) return delta > 0 ? 0 : "";
+  const next = Number(current) + delta;
+  if (next < 0) return "";
+  return Math.min(20, next);
+};
+
+const parseTypedScore = (value) => {
+  const digits = String(value).replace(/\D/g, "");
+  if (digits === "") return "";
+  return Math.min(20, parseInt(digits, 10));
+};
+
+function ScoreStepper({ value, locked, onNudge, onChange, label }) {
+  const empty = isBlankScore(value);
+  return (
+    <div className="score-stepper">
+      <button
+        type="button"
+        className="step-btn"
+        disabled={locked || value === 20}
+        onClick={() => onNudge(1)}
+        aria-label={`${label} score up`}
+      >
+        +
+      </button>
+      <input
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        autoComplete="off"
+        spellCheck="false"
+        maxLength={2}
+        className={`form-control score-input${empty ? " is-empty" : ""}`}
+        value={empty ? "" : value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={(e) => e.target.select()}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowUp") {
+            e.preventDefault();
+            onNudge(1);
+          } else if (e.key === "ArrowDown") {
+            e.preventDefault();
+            onNudge(-1);
+          }
+        }}
+        disabled={locked}
+        aria-label={label}
+      />
+      <button
+        type="button"
+        className="step-btn"
+        disabled={locked || empty}
+        onClick={() => onNudge(-1)}
+        aria-label={`${label} score down`}
+      >
+        −
+      </button>
+    </div>
+  );
+}
 
 const PredictionForm = ({ fixtures, matchweek }) => {
   const [predictions, setPredictions] = useState([]);
@@ -48,11 +113,11 @@ const PredictionForm = ({ fixtures, matchweek }) => {
     if (isLocked(fixtures[idx]._id)) return;
     setPredictions((prev) => {
       if (!prev[idx]) return prev;
-      const current = prev[idx][field];
-      const base = current === "" || current === null ? 0 : Number(current);
-      const next = Math.max(0, Math.min(20, base + delta));
       const updated = [...prev];
-      updated[idx] = { ...updated[idx], [field]: next };
+      updated[idx] = {
+        ...updated[idx],
+        [field]: nudgeFrom(prev[idx][field], delta),
+      };
       return updated;
     });
   };
@@ -92,10 +157,7 @@ const PredictionForm = ({ fixtures, matchweek }) => {
     setPredictions((prev) => {
       if (!prev[idx]) return prev;
       const updated = [...prev];
-      updated[idx] = {
-        ...updated[idx],
-        [field]: value === "" ? "" : parseInt(value) || 0,
-      };
+      updated[idx] = { ...updated[idx], [field]: parseTypedScore(value) };
       return updated;
     });
   };
@@ -235,33 +297,21 @@ const PredictionForm = ({ fixtures, matchweek }) => {
                 </div>
 
                 <div className="score-inputs">
-                  <div className="score-stepper">
-                    <button type="button" className="step-btn" disabled={locked} onClick={() => nudgeScore(idx, "predictedHomeScore", 1)} aria-label="Home score up">+</button>
-                    <input
-                      type="number"
-                      className="form-control score-input"
-                      min="0"
-                      value={pred?.predictedHomeScore ?? ""}
-                      onChange={(e) => handleScoreChange(idx, "predictedHomeScore", e.target.value)}
-                      disabled={locked}
-                      placeholder="0"
-                    />
-                    <button type="button" className="step-btn" disabled={locked} onClick={() => nudgeScore(idx, "predictedHomeScore", -1)} aria-label="Home score down">−</button>
-                  </div>
+                  <ScoreStepper
+                    value={pred?.predictedHomeScore}
+                    locked={locked}
+                    label="Home"
+                    onNudge={(delta) => nudgeScore(idx, "predictedHomeScore", delta)}
+                    onChange={(value) => handleScoreChange(idx, "predictedHomeScore", value)}
+                  />
                   <span className="score-divider">–</span>
-                  <div className="score-stepper">
-                    <button type="button" className="step-btn" disabled={locked} onClick={() => nudgeScore(idx, "predictedAwayScore", 1)} aria-label="Away score up">+</button>
-                    <input
-                      type="number"
-                      className="form-control score-input"
-                      min="0"
-                      value={pred?.predictedAwayScore ?? ""}
-                      onChange={(e) => handleScoreChange(idx, "predictedAwayScore", e.target.value)}
-                      disabled={locked}
-                      placeholder="0"
-                    />
-                    <button type="button" className="step-btn" disabled={locked} onClick={() => nudgeScore(idx, "predictedAwayScore", -1)} aria-label="Away score down">−</button>
-                  </div>
+                  <ScoreStepper
+                    value={pred?.predictedAwayScore}
+                    locked={locked}
+                    label="Away"
+                    onNudge={(delta) => nudgeScore(idx, "predictedAwayScore", delta)}
+                    onChange={(value) => handleScoreChange(idx, "predictedAwayScore", value)}
+                  />
                 </div>
 
                 <div className="prediction-team">

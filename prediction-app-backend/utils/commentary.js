@@ -58,7 +58,7 @@ async function buildWeekSummary(season, matchweek, memberIds) {
       picks.push(
         `${fixture.teams.home.name} ${p.predictedHomeScore}-${p.predictedAwayScore} ${fixture.teams.away.name}` +
           ` (actual ${fixture.goals.home}-${fixture.goals.away}, ${points ?? 0} pts` +
-          `${p.isDoublePoints ? ", DOUBLE POINTS pick" : ""})`
+          `${p.isDoublePoints ? ", NAP (pick of the day, points doubled)" : ""})`
       );
     }
 
@@ -95,7 +95,7 @@ async function generateCommentary(league, matchweek, season = CURRENT_SEASON) {
     `Results:`,
     ...summary.results.map((r) => `- ${r}`),
     ``,
-    `Players' predictions and points this week (3 pts exact score, 1 pt correct result, doubled on their chosen DOUBLE POINTS match):`,
+    `Players' predictions and points this week (3 pts exact score, 1 pt correct result, doubled if they NAPped that match — NAP = pick of the day):`,
     ...summary.players.map(
       (p) =>
         `\n${p.username} — ${p.weekTotal} pts this week:\n` +
@@ -119,8 +119,11 @@ async function generateCommentary(league, matchweek, season = CURRENT_SEASON) {
         content:
           "You are the resident pundit for a private Premier League score-prediction league of mates. " +
           "Write about THEIR picks, not a newspaper match report, though you may needle them with the actual scores. " +
-          "Voice: dry, withering, slightly abusive British football. Think Lineker if he'd had a row with his mates in the pub, or a Sunday league captain reading the WhatsApp group out loud. " +
-          "Take the piss. Name and shame rotten doubles, anyone who backed Manchester United, and exact scores that were obviously guessed. " +
+          "The doubled match is the NAP — nap of the day, pick of the day. Never call it an armband, captain, or 'the double'. " +
+          "Say they napped a team, or put their NAP on a match. A dead NAP is sacred comic material. " +
+          "Voice: clever, funny, abusive British football banter. Pub roast, not a press conference. Specific jokes, callbacks to last week, numbers that land. " +
+          "Do not write generic metaphors ('that's not X, that's Y', 'do not buy the T-shirt', 'stopped clock'). If a line could fit any week, bin it. " +
+          "Take the piss. Name and shame rotten NAPs, hive-mind scorelines, anyone still napping Manchester United, and blanks. " +
           "Praise is rare and backhanded. The winner still gets called lucky. " +
           "Mild British slang is fine (bloody, rubbish, shambles, bottled it). No slurs, no genuine nastiness about anyone's life. " +
           "150-250 words, 2-4 short paragraphs of flowing prose. No headings, bullets, markdown or sign-off. " +

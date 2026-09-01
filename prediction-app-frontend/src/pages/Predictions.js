@@ -76,7 +76,7 @@ function Predictions() {
   return (
     <div>
       <h1 className="page-title mb-2">Predict GW{matchweek}</h1>
-      <p className="text-muted mb-3">Write the scores on the ticket. One match wears the armband.</p>
+      <p className="text-muted mb-3">Type a score, or tap + to start at 0. One match is your NAP.</p>
       <SeasonTrack currentWeek={matchweek} />
       <PredictionForm fixtures={fixtures} matchweek={matchweek} />
     </div>
